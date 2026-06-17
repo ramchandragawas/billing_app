@@ -25,7 +25,8 @@ from billing_app.printer import build_text_bill
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = Path(os.getenv("BILLING_DB_PATH", str(BASE_DIR / "data" / "billing.db")))
+DEFAULT_DB_PATH = Path("/tmp/billing.db") if os.getenv("VERCEL") else BASE_DIR / "data" / "billing.db"
+DB_PATH = Path(os.getenv("BILLING_DB_PATH", str(DEFAULT_DB_PATH)))
 STATIC_DIR = BASE_DIR / "static"
 
 database = BillingDatabase(DB_PATH)
