@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ invoice['invoice_number'] }}</title>
+    <style>
+        :root {
+            --ink: #111;
+            --muted: #444;
+            --line: #222;
+            --soft: #666;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #ececec;
+            color: var(--ink);
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .toolbar button {
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 20px;
+            background: #16313c;
+            color: #fff;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .sheet {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 12px auto;
+            background: #fff;
+            padding: 12mm;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .title {
+            margin: 0 0 8px;
+            text-align: center;
+            font-size: 1.6rem;
+            letter-spacing: 0.02em;
+        }
+
+        .header-grid {
+            display: grid;
+            grid-template-columns: 1fr 2.2fr 1fr;
+            border: 1px solid var(--line);
+        }
+
+        .header-cell {
+            min-height: 150px;
+            padding: 12px;
+            border-right: 1px solid var(--line);
+        }
+
+        .header-cell:last-child {
+            border-right: 0;
+        }
+
+        .meta-list {
+            display: grid;
+            gap: 8px;
+            font-size: 0.92rem;
+        }
+
+        .brand-box {
+            display: grid;
+            gap: 6px;
+            align-content: start;
+        }
+
+        .brand-box h1 {
+            margin: 0;
+            font-size: 1.55rem;
+            text-transform: uppercase;
+        }
+
+        .brand-box .legal {
+            font-size: 1.04rem;
+            font-weight: 700;
+        }
+
+        .brand-box p {
+            margin: 0;
+            line-height: 1.45;
+            color: var(--muted);
+        }
+
+        .invoice-badge {
+            display: grid;
+            place-items: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .invoice-badge strong {
+            display: block;
+            font-size: 2.25rem;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .invoice-badge span {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .barcode-placeholder {
+            width: 100%;
+            height: 58px;
+            border: 1px solid var(--line);
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    #111 0 2px,
+                    #fff 2px 5px,
+                    #111 5px 7px,
+                    #fff 7px 11px
+                );
+        }
+
+        .address-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1.2fr 1fr;
+            border: 1px solid var(--line);
+            border-top: 0;
+        }
+
+        .address-cell {
+            min-height: 185px;
+            padding: 12px;
+            border-right: 1px solid var(--line);
+        }
+
+        .address-cell:last-child {
+            border-right: 0;
+        }
+
+        .section-label {
+            margin: 0 0 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .address-cell p,
+        .address-cell div,
+        .gift-note div {
+            margin: 0 0 6px;
+            line-height: 1.45;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .items {
+            margin-top: 16px;
+            border: 1px solid var(--line);
+        }
+
+        .items th,
+        .items td {
+            border-bottom: 1px solid var(--line);
+            padding: 10px 8px;
+            vertical-align: top;
+            font-size: 0.88rem;
+        }
+
+        .items th {
+            text-align: left;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .items td.num,
+        .items th.num {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .items tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .desc-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .desc-sub {
+            color: var(--soft);
+            line-height: 1.35;
+        }
+
+        .summary-wrap {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 0;
+            border: 1px solid var(--line);
+            border-top: 0;
+        }
+
+        .summary-left,
+        .summary-right {
+            padding: 12px;
+            min-height: 172px;
+        }
+
+        .summary-left {
+            border-right: 1px solid var(--line);
+        }
+
+        .summary-table td {
+            padding: 7px 0;
+            font-size: 0.95rem;
+        }
+
+        .summary-table td:last-child {
+            text-align: right;
+            font-weight: 700;
+        }
+
+        .footer-box {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            border: 1px solid var(--line);
+            border-top: 0;
+        }
+
+        .footer-left,
+        .footer-right {
+            padding: 12px;
+            min-height: 130px;
+        }
+
+        .footer-left {
+            border-right: 1px solid var(--line);
+        }
+
+        .footer-left p {
+            margin: 0 0 8px;
+            line-height: 1.45;
+        }
+
+        .signature-box {
+            display: grid;
+            height: 100%;
+            align-content: end;
+            justify-items: center;
+            text-align: center;
+        }
+
+        .signature-mark {
+            width: 120px;
+            height: 52px;
+            border: 1px solid var(--line);
+            margin-bottom: 10px;
+            display: grid;
+            place-items: center;
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+            }
+
+            .toolbar {
+                display: none;
+            }
+
+            .sheet {
+                margin: 0;
+                width: 100%;
+                min-height: auto;
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sheet {
+                width: min(100%, calc(100% - 12px));
+                min-height: auto;
+                padding: 14px;
+            }
+
+            .header-grid,
+            .address-grid,
+            .summary-wrap,
+            .footer-box {
+                grid-template-columns: 1fr;
+            }
+
+            .header-cell,
+            .address-cell,
+            .summary-left,
+            .footer-left {
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button onclick="window.print()">Print This Bill</button>
+    </div>
+
+    {% set calculated = invoice['calculated'] %}
+    {% set totals = calculated['totals'] %}
+    {% set bill_name = calculated.get('customer_name') or 'Walk-in Customer' %}
+    {% set delivery_name = calculated.get('delivery_name') or calculated.get('customer_name') or 'Same as billing' %}
+    {% set comments = calculated.get('customer_comments') or calculated.get('remark') or 'No customer comments.' %}
+    {% set legal_name = settings.get('store_legal_name') or calculated.get('store_name') %}
+    {% set signatory = settings.get('authorized_signatory') or 'Authorized Signatory' %}
+
+    <main class="sheet">
+        <h1 class="title">Tax Invoice</h1>
+
+        <section class="header-grid">
+            <div class="header-cell">
+                <div class="meta-list">
+                    <div><strong>Shipment Code:</strong> {{ calculated.get('shipment_code') or '-' }}</div>
+                    <div><strong>Order Ref:</strong> {{ calculated.get('order_reference') or '-' }}</div>
+                    <div><strong>Order Date:</strong> {{ calculated.get('bill_date') }}</div>
+                    <div><strong>Total Quantity:</strong> {{ totals.get('total_quantity') or '0.00' }}</div>
+                </div>
+                <div style="margin-top: 14px;">
+                    <div class="barcode-placeholder"></div>
+                </div>
+            </div>
+
+            <div class="header-cell">
+                <div class="brand-box">
+                    <div class="legal">{{ legal_name }}</div>
+                    <h1>{{ calculated.get('store_name') }}</h1>
+                    <p>{{ calculated.get('store_address') }}</p>
+                    {% if calculated.get('store_phone') %}
+                        <p><strong>Phone:</strong> {{ calculated.get('store_phone') }}</p>
+                    {% endif %}
+                    {% if calculated.get('store_email') %}
+                        <p><strong>Contact Email:</strong> {{ calculated.get('store_email') }}</p>
+                    {% endif %}
+                    {% if calculated.get('store_gstin') %}
+                        <p><strong>GSTIN No:</strong> {{ calculated.get('store_gstin') }}</p>
+                    {% endif %}
+                    {% if settings.get('store_state_code') %}
+                        <p><strong>State Code:</strong> {{ settings.get('store_state_code') }}</p>
+                    {% endif %}
+                    {% if settings.get('store_website') %}
+                        <p><strong>Website:</strong> {{ settings.get('store_website') }}</p>
+                    {% endif %}
+                    <p><strong>Invoice:</strong> {{ calculated.get('invoice_number') }}</p>
+                    <p><strong>Invoice Date:</strong> {{ calculated.get('bill_date') }}</p>
+                    <p><strong>Payment Method:</strong> {{ calculated.get('payment_mode') or 'Not selected' }}</p>
+                </div>
+            </div>
+
+            <div class="header-cell">
+                <div class="invoice-badge">
+                    <div>
+                        <strong>{{ calculated.get('invoice_number', '').split('-')[-1] if calculated.get('invoice_number') else '-' }}</strong>
+                        <span>Invoice Number</span>
+                        <div class="barcode-placeholder"></div>
+                        <div style="margin-top: 8px; font-size: 0.85rem;">{{ calculated.get('invoice_number') }}</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="address-grid">
+            <div class="address-cell">
+                <p class="section-label">Bill To Address</p>
+                <p><strong>{{ bill_name }}</strong></p>
+                <p>{{ calculated.get('customer_address') or 'Address not provided' }}</p>
+                <p>Phone: {{ calculated.get('customer_phone') or 'Not provided' }}</p>
+            </div>
+
+            <div class="address-cell">
+                <p class="section-label">Address Of Delivery</p>
+                <p><strong>{{ delivery_name }}</strong></p>
+                <p>{{ calculated.get('delivery_address') or calculated.get('customer_address') or 'Same as billing address' }}</p>
+                <p>Phone: {{ calculated.get('delivery_phone') or calculated.get('customer_phone') or 'Not provided' }}</p>
+            </div>
+
+            <div class="address-cell gift-note">
+                <p class="section-label">Notes</p>
+                <div><strong>Gift From:</strong> {{ calculated.get('gift_from') or '-' }}</div>
+                <div><strong>Gift To:</strong> {{ calculated.get('gift_to') or '-' }}</div>
+                <div><strong>Customer Comments:</strong> {{ comments }}</div>
+                <div><strong>Status:</strong> {{ calculated.get('status') or 'BOOKED' }}</div>
+                <div><strong>Tax Mode:</strong> {{ calculated.get('tax_mode') or 'INTRA_STATE' }}</div>
+            </div>
+        </section>
+
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>Description Of Goods</th>
+                    <th>HSN</th>
+                    <th class="num">Unit Price</th>
+                    <th class="num">Discount</th>
+                    <th class="num">Taxable</th>
+                    <th class="num">IGST</th>
+                    <th class="num">SGST</th>
+                    <th class="num">CGST</th>
+                    <th class="num">Qty</th>
+                    <th class="num">Unit Price (Inc. GST)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in calculated.get('lines', []) %}
+                    <tr>
+                        <td>
+                            <div class="desc-title">{{ line.get('name') or '-' }}</div>
+                            <div class="desc-sub">{{ line.get('description') or 'No item description' }}</div>
+                        </td>
+                        <td>{{ line.get('hsn_code') or '-' }}</td>
+                        <td class="num">{{ line.get('unit_price') or '0.00' }}</td>
+                        <td class="num">{{ line.get('discount_amount') or '0.00' }}</td>
+                        <td class="num">{{ line.get('taxable_amount') or line.get('line_total') or '0.00' }}</td>
+                        <td class="num">{{ line.get('igst_amount') or '0.00' }}</td>
+                        <td class="num">{{ line.get('sgst_amount') or '0.00' }}</td>
+                        <td class="num">{{ line.get('cgst_amount') or '0.00' }}</td>
+                        <td class="num">{{ line.get('quantity') or '0.00' }}</td>
+                        <td class="num">{{ line.get('line_total') or '0.00' }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <section class="summary-wrap">
+            <div class="summary-left">
+                <p class="section-label">Summary</p>
+                <table class="summary-table">
+                    <tr>
+                        <td>Subtotal</td>
+                        <td>{{ totals.get('subtotal') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Discount</td>
+                        <td>{{ totals.get('discount_amount') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Taxable Value</td>
+                        <td>{{ totals.get('taxable_subtotal') or totals.get('subtotal') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Tax</td>
+                        <td>{{ totals.get('total_tax') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Subtotal (Inc. GST)</td>
+                        <td>{{ totals.get('subtotal_including_tax') or totals.get('grand_total') or '0.00' }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="summary-right">
+                <p class="section-label">Final Amount</p>
+                <table class="summary-table">
+                    <tr>
+                        <td>IGST</td>
+                        <td>{{ totals.get('igst_total') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>CGST</td>
+                        <td>{{ totals.get('cgst_total') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>SGST</td>
+                        <td>{{ totals.get('sgst_total') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Grand Total</td>
+                        <td>{{ totals.get('grand_total') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Advance</td>
+                        <td>{{ totals.get('advance_paid') or '0.00' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Balance Due</td>
+                        <td>{{ totals.get('balance_due') or '0.00' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <section class="footer-box">
+            <div class="footer-left">
+                <p class="section-label">Disclaimer</p>
+                <p>1. {{ settings.get('footer_note') or 'This is a computer generated invoice and does not require signature.' }}</p>
+                {% if settings.get('terms_and_conditions') %}
+                    <p>2. {{ settings.get('terms_and_conditions') }}</p>
+                {% endif %}
+                <p>3. Generated for {{ legal_name }}.</p>
+            </div>
+            <div class="footer-right">
+                <div class="signature-box">
+                    <div style="font-weight: 700; margin-bottom: 10px;">{{ legal_name }}</div>
+                    <div class="signature-mark">Signature</div>
+                    <div>{{ signatory }}</div>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
