@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import os
+import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -26,8 +27,24 @@ from billing_app.printer import build_text_bill
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = Path(os.getenv("BILLING_DB_PATH", str(BASE_DIR / "data" / "billing.db")))
 STATIC_DIR = BASE_DIR / "static"
+
+
+def _default_db_path() -> Path:
+    explicit_path = os.getenv("BILLING_DB_PATH")
+    if explicit_path:
+        return Path(explicit_path)
+
+    temp_db = Path(tempfile.gettempdir()) / "billing.db"
+    local_db = BASE_DIR / "data" / "billing.db"
+
+    if os.getenv("VERCEL") or not os.access(BASE_DIR, os.W_OK):
+        return temp_db
+
+    return local_db
+
+
+DB_PATH = _default_db_path()
 
 database = BillingDatabase(DB_PATH)
 printer_service = PrinterService()
