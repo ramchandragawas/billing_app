@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/index.py": {
-      "includeFiles": "billing_app/{templates,static}/**"
+      "includeFiles": "billing_app/**"
     }
   },
   "rewrites": [
