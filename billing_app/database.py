@@ -30,6 +30,10 @@ class DraftNotFoundError(Exception):
     """Raised when a preview draft token is missing or expired."""
 
 
+class InvoiceNotFoundError(Exception):
+    """Raised when an invoice id cannot be found."""
+
+
 class BillingDatabase:
     def __init__(self, db_path: Path):
         self.db_path = db_path
@@ -52,6 +56,7 @@ class BillingDatabase:
                     status TEXT,
                     customer_name TEXT,
                     customer_phone TEXT,
+                    customer_email TEXT,
                     grand_total TEXT,
                     balance_due TEXT,
                     payload_json TEXT NOT NULL,
@@ -80,6 +85,7 @@ class BillingDatabase:
                 CREATE TABLE IF NOT EXISTS invoice_drafts (
                     preview_token TEXT PRIMARY KEY,
                     invoice_number TEXT NOT NULL,
+                    source_invoice_id INTEGER,
                     created_at TEXT NOT NULL,
                     expires_at TEXT NOT NULL,
                     payload_json TEXT NOT NULL
@@ -91,8 +97,10 @@ class BillingDatabase:
             self._ensure_invoice_column(connection, "delivery_date", "TEXT")
             self._ensure_invoice_column(connection, "status", "TEXT")
             self._ensure_invoice_column(connection, "customer_phone", "TEXT")
+            self._ensure_invoice_column(connection, "customer_email", "TEXT")
             self._ensure_invoice_column(connection, "grand_total", "TEXT")
             self._ensure_invoice_column(connection, "balance_due", "TEXT")
+            self._ensure_invoice_draft_column(connection, "source_invoice_id", "INTEGER")
 
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_invoices_status_created ON invoices(status, created_at DESC)"
@@ -108,6 +116,9 @@ class BillingDatabase:
             )
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_invoice_drafts_invoice_number ON invoice_drafts(invoice_number)"
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_invoice_drafts_source_invoice_id ON invoice_drafts(source_invoice_id)"
             )
 
             self._seed_settings(connection)
@@ -144,10 +155,23 @@ class BillingDatabase:
         with self._managed_connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             self._purge_expired_drafts(connection)
+            source_invoice_id = payload.source_invoice_id
 
-            invoice_number = payload.invoice_number or self._reserve_invoice_number(connection)
-            if payload.invoice_number and self._invoice_number_in_use(connection, invoice_number):
-                raise InvoiceConflictError(f"Invoice number {invoice_number} is already in use.")
+            if source_invoice_id:
+                source_row = connection.execute(
+                    "SELECT id, invoice_number FROM invoices WHERE id = ?",
+                    (source_invoice_id,),
+                ).fetchone()
+                if not source_row:
+                    raise InvoiceNotFoundError(f"Invoice {source_invoice_id} was not found.")
+                connection.execute("DELETE FROM invoice_drafts WHERE source_invoice_id = ?", (source_invoice_id,))
+                invoice_number = payload.invoice_number or source_row["invoice_number"]
+                if self._invoice_number_in_use_elsewhere(connection, invoice_number, source_invoice_id):
+                    raise InvoiceConflictError(f"Invoice number {invoice_number} is already in use.")
+            else:
+                invoice_number = payload.invoice_number or self._reserve_invoice_number(connection)
+                if payload.invoice_number and self._invoice_number_in_use(connection, invoice_number):
+                    raise InvoiceConflictError(f"Invoice number {invoice_number} is already in use.")
 
             preview_token = uuid.uuid4().hex
             created_at = datetime.now()
@@ -157,15 +181,17 @@ class BillingDatabase:
                 INSERT INTO invoice_drafts (
                     preview_token,
                     invoice_number,
+                    source_invoice_id,
                     created_at,
                     expires_at,
                     payload_json
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     preview_token,
                     invoice_number,
+                    source_invoice_id,
                     created_at.isoformat(),
                     expires_at.isoformat(),
                     payload.model_dump_json(),
@@ -186,7 +212,7 @@ class BillingDatabase:
             self._purge_expired_drafts(connection)
             draft = connection.execute(
                 """
-                SELECT preview_token, invoice_number, payload_json
+                SELECT preview_token, invoice_number, source_invoice_id, payload_json
                 FROM invoice_drafts
                 WHERE preview_token = ?
                 """,
@@ -196,49 +222,102 @@ class BillingDatabase:
                 raise DraftNotFoundError("Preview draft not found or expired.")
 
             invoice_number = draft["invoice_number"]
-            if self._invoice_number_exists(connection, invoice_number):
-                raise InvoiceConflictError(f"Invoice number {invoice_number} is already used.")
-
             payload = InvoicePayload.model_validate(json.loads(draft["payload_json"]))
-            calculated = calculate_invoice(payload, invoice_number=invoice_number)
-            cursor = connection.execute(
-                """
-                INSERT INTO invoices (
-                    invoice_number,
-                    created_at,
-                    bill_date,
-                    delivery_date,
-                    status,
-                    customer_name,
-                    customer_phone,
-                    grand_total,
-                    balance_due,
-                    payload_json,
-                    calculation_json
+            source_invoice_id = draft["source_invoice_id"]
+
+            if source_invoice_id:
+                existing = connection.execute(
+                    "SELECT id, created_at FROM invoices WHERE id = ?",
+                    (source_invoice_id,),
+                ).fetchone()
+                if not existing:
+                    raise InvoiceNotFoundError(f"Invoice {source_invoice_id} was not found.")
+                if self._invoice_number_exists_other(connection, invoice_number, source_invoice_id):
+                    raise InvoiceConflictError(f"Invoice number {invoice_number} is already used.")
+                calculated = calculate_invoice(
+                    payload,
+                    invoice_number=invoice_number,
+                    created_at=datetime.fromisoformat(existing["created_at"]),
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    calculated.invoice_number,
-                    calculated.created_at.isoformat(),
-                    calculated.bill_date,
-                    calculated.delivery_date,
-                    calculated.status,
-                    calculated.customer_name,
-                    calculated.customer_phone,
-                    str(calculated.totals.grand_total),
-                    str(calculated.totals.balance_due),
-                    payload.model_dump_json(),
-                    calculated.model_dump_json(),
-                ),
-            )
-            invoice_id = cursor.lastrowid
+                connection.execute(
+                    """
+                    UPDATE invoices
+                    SET invoice_number = ?,
+                        bill_date = ?,
+                        delivery_date = ?,
+                        status = ?,
+                        customer_name = ?,
+                        customer_phone = ?,
+                        customer_email = ?,
+                        grand_total = ?,
+                        balance_due = ?,
+                        payload_json = ?,
+                        calculation_json = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        calculated.invoice_number,
+                        calculated.bill_date,
+                        calculated.delivery_date,
+                        calculated.status,
+                        calculated.customer_name,
+                        calculated.customer_phone,
+                        calculated.customer_email,
+                        str(calculated.totals.grand_total),
+                        str(calculated.totals.balance_due),
+                        payload.model_dump_json(),
+                        calculated.model_dump_json(),
+                        source_invoice_id,
+                    ),
+                )
+                invoice_id = source_invoice_id
+                operation = "updated"
+            else:
+                if self._invoice_number_exists(connection, invoice_number):
+                    raise InvoiceConflictError(f"Invoice number {invoice_number} is already used.")
+                calculated = calculate_invoice(payload, invoice_number=invoice_number)
+                cursor = connection.execute(
+                    """
+                    INSERT INTO invoices (
+                        invoice_number,
+                        created_at,
+                        bill_date,
+                        delivery_date,
+                        status,
+                        customer_name,
+                        customer_phone,
+                        customer_email,
+                        grand_total,
+                        balance_due,
+                        payload_json,
+                        calculation_json
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        calculated.invoice_number,
+                        calculated.created_at.isoformat(),
+                        calculated.bill_date,
+                        calculated.delivery_date,
+                        calculated.status,
+                        calculated.customer_name,
+                        calculated.customer_phone,
+                        calculated.customer_email,
+                        str(calculated.totals.grand_total),
+                        str(calculated.totals.balance_due),
+                        payload.model_dump_json(),
+                        calculated.model_dump_json(),
+                    ),
+                )
+                invoice_id = cursor.lastrowid
+                operation = "created"
             connection.execute("DELETE FROM invoice_drafts WHERE preview_token = ?", (preview_token,))
             connection.commit()
 
         invoice = self.get_invoice(invoice_id)
         return {
             "id": invoice_id,
+            "operation": operation,
             "invoice_number": calculated.invoice_number,
             "created_at": calculated.created_at.isoformat(),
             "invoice": invoice,
@@ -270,7 +349,7 @@ class BillingDatabase:
             row = connection.execute(
                 """
                 SELECT id, invoice_number, created_at, bill_date, delivery_date, status,
-                       customer_name, customer_phone, grand_total, balance_due, payload_json, calculation_json
+                       customer_name, customer_phone, customer_email, grand_total, balance_due, payload_json, calculation_json
                 FROM invoices
                 WHERE id = ?
                 """,
@@ -297,7 +376,7 @@ class BillingDatabase:
             rows = connection.execute(
                 f"""
                 SELECT id, invoice_number, created_at, bill_date, delivery_date, status,
-                       customer_name, customer_phone, grand_total, balance_due, payload_json, calculation_json
+                       customer_name, customer_phone, customer_email, grand_total, balance_due, payload_json, calculation_json
                 FROM invoices
                 {where_sql}
                 ORDER BY id DESC
@@ -308,22 +387,22 @@ class BillingDatabase:
         return [self._row_to_invoice(row) for row in rows]
 
     def recent_customers(self, query: str | None = None, limit: int = 8) -> list[dict]:
-        clauses = ["(customer_name IS NOT NULL OR customer_phone IS NOT NULL)"]
+        clauses = ["(customer_name IS NOT NULL OR customer_phone IS NOT NULL OR customer_email IS NOT NULL)"]
         params: list[object] = []
         if query:
             like = f"%{query.strip()}%"
-            clauses.append("(customer_name LIKE ? OR customer_phone LIKE ?)")
-            params.extend([like, like])
+            clauses.append("(customer_name LIKE ? OR customer_phone LIKE ? OR customer_email LIKE ?)")
+            params.extend([like, like, like])
         params.append(limit)
 
         with self._managed_connection() as connection:
             rows = connection.execute(
                 f"""
-                SELECT MAX(id) AS latest_invoice_id, customer_name, customer_phone,
+                SELECT MAX(id) AS latest_invoice_id, customer_name, customer_phone, customer_email,
                        MAX(created_at) AS last_seen
                 FROM invoices
                 WHERE {' AND '.join(clauses)}
-                GROUP BY customer_name, customer_phone
+                GROUP BY customer_name, customer_phone, customer_email
                 ORDER BY MAX(created_at) DESC
                 LIMIT ?
                 """,
@@ -334,6 +413,7 @@ class BillingDatabase:
                 "latest_invoice_id": row["latest_invoice_id"],
                 "customer_name": row["customer_name"],
                 "customer_phone": row["customer_phone"],
+                "customer_email": row["customer_email"],
                 "last_seen": row["last_seen"],
             }
             for row in rows
@@ -375,30 +455,21 @@ class BillingDatabase:
             lines = calculated.get("lines", [])
             row = {
                 "invoice_number": invoice["invoice_number"],
-                "order_reference": calculated.get("order_reference") or "",
-                "shipment_code": calculated.get("shipment_code") or "",
                 "bill_date": invoice["bill_date"] or "",
-                "delivery_date": invoice["delivery_date"] or "",
                 "status": invoice["status"] or "",
                 "customer_name": invoice["customer_name"] or "",
                 "customer_phone": invoice["customer_phone"] or "",
-                "customer_address": calculated.get("customer_address") or "",
-                "delivery_name": calculated.get("delivery_name") or "",
-                "delivery_phone": calculated.get("delivery_phone") or "",
-                "delivery_address": calculated.get("delivery_address") or "",
-                "payment_mode": calculated.get("payment_mode") or "",
-                "tax_mode": calculated.get("tax_mode") or "",
-                "customer_comments": calculated.get("customer_comments") or calculated.get("remark") or "",
-                "gift_from": calculated.get("gift_from") or "",
-                "gift_to": calculated.get("gift_to") or "",
+                "customer_email": invoice["customer_email"] or "",
+                "remark": calculated.get("remark") or calculated.get("customer_comments") or "",
+                "insurance_opt_in": calculated.get("insurance_opt_in"),
+                "membership_opt_in": calculated.get("membership_opt_in"),
+                "advance_cash": calculated.get("advance_cash"),
+                "advance_gpay": calculated.get("advance_gpay"),
+                "gst_percent": calculated.get("gst_percent") or "0.00",
                 "total_quantity": totals.get("total_quantity") or "0.00",
                 "subtotal": totals.get("subtotal") or "0.00",
                 "discount_percent": totals.get("discount_percent") or "0.00",
                 "discount_amount": totals.get("discount_amount") or "0.00",
-                "taxable_subtotal": totals.get("taxable_subtotal") or "0.00",
-                "igst_total": totals.get("igst_total") or "0.00",
-                "sgst_total": totals.get("sgst_total") or "0.00",
-                "cgst_total": totals.get("cgst_total") or "0.00",
                 "total_tax": totals.get("total_tax") or "0.00",
                 "subtotal_including_tax": totals.get("subtotal_including_tax") or "0.00",
                 "grand_total": totals.get("grand_total") or "0.00",
@@ -415,10 +486,8 @@ class BillingDatabase:
                         for part in [
                             line.get("name") or "",
                             line.get("description") or "",
-                            f"HSN {line.get('hsn_code')}" if line.get("hsn_code") else "",
                             f"Qty {line.get('quantity')}" if line.get("quantity") else "",
                             f"Rate {line.get('unit_price')}" if line.get("unit_price") else "",
-                            f"GST {line.get('gst_rate')}%" if line.get("gst_rate") is not None else "",
                             f"Total {line.get('line_total')}" if line.get("line_total") else "",
                         ]
                         if part
@@ -497,6 +566,18 @@ class BillingDatabase:
     def _invoice_number_in_use(self, connection: sqlite3.Connection, invoice_number: str) -> bool:
         return self._invoice_number_exists(connection, invoice_number) or self._invoice_number_reserved(connection, invoice_number)
 
+    def _invoice_number_in_use_elsewhere(
+        self,
+        connection: sqlite3.Connection,
+        invoice_number: str,
+        invoice_id: int,
+    ) -> bool:
+        return self._invoice_number_exists_other(connection, invoice_number, invoice_id) or self._invoice_number_reserved_other(
+            connection,
+            invoice_number,
+            invoice_id,
+        )
+
     def _invoice_number_exists(self, connection: sqlite3.Connection, invoice_number: str) -> bool:
         row = connection.execute(
             "SELECT 1 FROM invoices WHERE invoice_number = ? LIMIT 1",
@@ -508,6 +589,26 @@ class BillingDatabase:
         row = connection.execute(
             "SELECT 1 FROM invoice_drafts WHERE invoice_number = ? LIMIT 1",
             (invoice_number,),
+        ).fetchone()
+        return bool(row)
+
+    def _invoice_number_exists_other(self, connection: sqlite3.Connection, invoice_number: str, invoice_id: int) -> bool:
+        row = connection.execute(
+            "SELECT 1 FROM invoices WHERE invoice_number = ? AND id != ? LIMIT 1",
+            (invoice_number, invoice_id),
+        ).fetchone()
+        return bool(row)
+
+    def _invoice_number_reserved_other(self, connection: sqlite3.Connection, invoice_number: str, invoice_id: int) -> bool:
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM invoice_drafts
+            WHERE invoice_number = ?
+              AND (source_invoice_id IS NULL OR source_invoice_id != ?)
+            LIMIT 1
+            """,
+            (invoice_number, invoice_id),
         ).fetchone()
         return bool(row)
 
@@ -530,6 +631,11 @@ class BillingDatabase:
         if name not in columns:
             connection.execute(f"ALTER TABLE invoices ADD COLUMN {name} {column_type}")
 
+    def _ensure_invoice_draft_column(self, connection: sqlite3.Connection, name: str, column_type: str) -> None:
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(invoice_drafts)").fetchall()}
+        if name not in columns:
+            connection.execute(f"ALTER TABLE invoice_drafts ADD COLUMN {name} {column_type}")
+
     def _row_to_invoice(self, row: sqlite3.Row) -> dict:
         payload = json.loads(row["payload_json"])
         calculated = json.loads(row["calculation_json"])
@@ -543,6 +649,7 @@ class BillingDatabase:
             "status": row["status"] or calculated.get("status", "BOOKED"),
             "customer_name": row["customer_name"],
             "customer_phone": row["customer_phone"],
+            "customer_email": row["customer_email"] or calculated.get("customer_email"),
             "grand_total": row["grand_total"],
             "balance_due": row["balance_due"],
             "payload": payload,

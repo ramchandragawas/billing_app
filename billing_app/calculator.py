@@ -23,7 +23,6 @@ def build_invoice_number(sequence: int) -> str:
 def calculate_invoice(payload: InvoicePayload, invoice_number: str, created_at: datetime | None = None) -> InvoiceCalculated:
     created_on = created_at or datetime.now()
     lines: list[InvoiceLineCalculated] = []
-    base_lines: list[dict] = []
     subtotal = Decimal("0")
     total_quantity = Decimal("0")
 
@@ -31,85 +30,37 @@ def calculate_invoice(payload: InvoicePayload, invoice_number: str, created_at: 
         base_amount = money(item.quantity * item.unit_price)
         subtotal += base_amount
         total_quantity += item.quantity
-        base_lines.append(
-            {
-                "name": item.name,
-                "description": item.description,
-                "hsn_code": item.hsn_code,
-                "quantity": money(item.quantity),
-                "unit_price": money(item.unit_price),
-                "gst_rate": money(item.gst_rate),
-                "base_amount": base_amount,
-            }
+        lines.append(
+            InvoiceLineCalculated(
+                name=item.name,
+                description=item.description,
+                hsn_code=item.hsn_code,
+                quantity=money(item.quantity),
+                unit_price=money(item.unit_price),
+                gst_rate=money(item.gst_rate),
+                discount_amount=Decimal("0.00"),
+                taxable_amount=base_amount,
+                igst_amount=Decimal("0.00"),
+                sgst_amount=Decimal("0.00"),
+                cgst_amount=Decimal("0.00"),
+                line_total=base_amount,
+            )
         )
 
     subtotal = money(subtotal)
     total_quantity = money(total_quantity)
+    gst_percent = money(payload.gst_percent)
+    gst_amount = money(subtotal * gst_percent / Decimal("100"))
+    subtotal_including_tax = money(subtotal + gst_amount)
     discount_percent = money(payload.discount_percent)
-    discount_amount = money(subtotal * discount_percent / Decimal("100"))
+    discount_amount = money(subtotal_including_tax * discount_percent / Decimal("100"))
+    grand_total = money(max(subtotal_including_tax - discount_amount, Decimal("0")))
     advance_paid = money(payload.advance_paid)
-    remaining_discount = discount_amount
-    taxable_subtotal = Decimal("0")
-    igst_total = Decimal("0")
-    sgst_total = Decimal("0")
-    cgst_total = Decimal("0")
-
-    for index, item in enumerate(base_lines):
-        if subtotal > 0:
-            proportional_discount = money(discount_amount * item["base_amount"] / subtotal)
-        else:
-            proportional_discount = Decimal("0.00")
-        if index == len(base_lines) - 1:
-            proportional_discount = remaining_discount
-        proportional_discount = money(min(proportional_discount, item["base_amount"]))
-        remaining_discount = money(max(remaining_discount - proportional_discount, Decimal("0")))
-
-        taxable_amount = money(max(item["base_amount"] - proportional_discount, Decimal("0")))
-        gst_rate = item["gst_rate"]
-        if payload.tax_mode == "INTER_STATE":
-            igst_amount = money(taxable_amount * gst_rate / Decimal("100"))
-            sgst_amount = Decimal("0.00")
-            cgst_amount = Decimal("0.00")
-        else:
-            half_rate = gst_rate / Decimal("2")
-            igst_amount = Decimal("0.00")
-            sgst_amount = money(taxable_amount * half_rate / Decimal("100"))
-            cgst_amount = money(taxable_amount * half_rate / Decimal("100"))
-        line_total = money(taxable_amount + igst_amount + sgst_amount + cgst_amount)
-
-        taxable_subtotal += taxable_amount
-        igst_total += igst_amount
-        sgst_total += sgst_amount
-        cgst_total += cgst_amount
-
-        lines.append(
-            InvoiceLineCalculated(
-                name=item["name"],
-                description=item["description"],
-                hsn_code=item["hsn_code"],
-                quantity=item["quantity"],
-                unit_price=item["unit_price"],
-                gst_rate=gst_rate,
-                discount_amount=proportional_discount,
-                taxable_amount=taxable_amount,
-                igst_amount=igst_amount,
-                sgst_amount=sgst_amount,
-                cgst_amount=cgst_amount,
-                line_total=line_total,
-            )
-        )
-
-    taxable_subtotal = money(taxable_subtotal)
-    igst_total = money(igst_total)
-    sgst_total = money(sgst_total)
-    cgst_total = money(cgst_total)
-    total_tax = money(igst_total + sgst_total + cgst_total)
-    subtotal_including_tax = money(taxable_subtotal + total_tax)
-    grand_total = subtotal_including_tax
     balance_due = money(max(grand_total - advance_paid, Decimal("0")))
 
     return InvoiceCalculated(
         created_at=created_on,
+        source_invoice_id=payload.source_invoice_id,
         invoice_number=payload.invoice_number or invoice_number,
         order_reference=payload.order_reference,
         shipment_code=payload.shipment_code,
@@ -124,8 +75,14 @@ def calculate_invoice(payload: InvoicePayload, invoice_number: str, created_at: 
         store_gstin=payload.store_gstin,
         store_email=payload.store_email,
         customer_name=payload.customer_name,
+        customer_email=payload.customer_email,
         customer_address=payload.customer_address,
         customer_phone=payload.customer_phone,
+        insurance_opt_in=payload.insurance_opt_in,
+        membership_opt_in=payload.membership_opt_in,
+        advance_cash=payload.advance_cash,
+        advance_gpay=payload.advance_gpay,
+        gst_percent=gst_percent,
         delivery_name=payload.delivery_name or payload.customer_name,
         delivery_address=payload.delivery_address or payload.customer_address,
         delivery_phone=payload.delivery_phone or payload.customer_phone,
@@ -144,11 +101,11 @@ def calculate_invoice(payload: InvoicePayload, invoice_number: str, created_at: 
             subtotal=subtotal,
             discount_percent=discount_percent,
             discount_amount=discount_amount,
-            taxable_subtotal=taxable_subtotal,
-            igst_total=igst_total,
-            sgst_total=sgst_total,
-            cgst_total=cgst_total,
-            total_tax=total_tax,
+            taxable_subtotal=subtotal,
+            igst_total=Decimal("0.00"),
+            sgst_total=Decimal("0.00"),
+            cgst_total=Decimal("0.00"),
+            total_tax=gst_amount,
             subtotal_including_tax=subtotal_including_tax,
             grand_total=grand_total,
             advance_paid=advance_paid,

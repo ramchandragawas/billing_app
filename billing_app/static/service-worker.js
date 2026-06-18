@@ -1,9 +1,10 @@
-const CACHE_NAME = "clear-view-billing-v4";
+const CACHE_NAME = "clear-view-billing-v6";
 const STATIC_ASSETS = [
   "/",
   "/manifest.webmanifest",
   "/static/app.css",
   "/static/app.js",
+  "/static/logo/clear-view-logo.svg",
   "/static/icons/app-icon.svg",
   "/static/icons/app-maskable.svg",
 ];

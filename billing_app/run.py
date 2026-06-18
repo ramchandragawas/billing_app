@@ -14,7 +14,7 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 def main() -> None:
     host = os.getenv("BILLING_HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", os.getenv("BILLING_PORT", "8000")))
+    port = int(os.getenv("PORT", os.getenv("BILLING_PORT", "8001")))
     reload_enabled = _env_flag("BILLING_RELOAD", default=False)
     uvicorn.run("billing_app.main:app", host=host, port=port, reload=reload_enabled)
 

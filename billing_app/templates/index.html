@@ -3,430 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#16313c">
+    <meta name="theme-color" content="#0f3d42">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="stylesheet" href="/static/app.css">
     <title>{{ settings["store_name"] }} Billing</title>
 </head>
 <body>
-    <div class="page-glow glow-left"></div>
-    <div class="page-glow glow-right"></div>
+    <div class="page-backdrop"></div>
 
-    <div class="app-shell compact-shell">
-        <header class="panel compact-hero">
-            <div>
-                <p class="eyebrow">Clear Billing Workspace</p>
-                <h1 id="hero-store-name">{{ settings["store_name"] }}</h1>
-                <p class="hero-text">Create A4 tax invoices, preview before generating, print for customers, and keep your shop records organised in one place.</p>
+    <div class="app-shell">
+        <header class="topbar card">
+            <div class="brand">
+                <img class="brand-logo" src="/static/logo/clear-view-logo.svg" alt="Clear View logo">
+                <div>
+                    <p class="eyebrow">Optical billing</p>
+                    <h1 id="hero-store-name">{{ settings["store_name"] }}</h1>
+                    <p class="hero-copy">Simple bills, clean printouts, saved customer history, and safe preview-before-save workflow.</p>
+                </div>
             </div>
-            <div class="hero-actions">
-                <button id="install-app" class="button button-primary" type="button" hidden>Install App</button>
-                <button class="button button-secondary" type="button" data-jump="new-bill">New Bill</button>
-                <button class="button button-ghost" type="button" data-jump="history">Bills</button>
-                <a class="button button-ghost" href="/api/export/invoices.csv">Export CSV</a>
+            <div class="top-actions">
+                <button class="button button-secondary" type="button" data-jump="bill-section">New Bill</button>
+                <button class="button button-ghost" type="button" data-jump="history-section">Bills</button>
+                <button class="button button-ghost" type="button" data-jump="settings-section">Settings</button>
+                <a class="button button-link" href="/api/export/invoices.csv">Export CSV</a>
             </div>
         </header>
 
-        <section class="stats-grid compact-stats" id="stats-grid">
-            <article class="stat-card">
-                <span>Total Bills</span>
-                <strong id="stat-total-invoices">{{ stats["total_invoices"] }}</strong>
-                <p>Saved invoices</p>
-            </article>
-            <article class="stat-card">
-                <span>Open Orders</span>
-                <strong id="stat-booked">{{ stats["booked_count"] }}</strong>
-                <p>Booked or in progress</p>
-            </article>
-            <article class="stat-card">
-                <span>Total Due</span>
-                <strong id="stat-due">{{ settings["currency_symbol"] }} {{ stats["total_due"] }}</strong>
-                <p>Pending collection</p>
-            </article>
-            <article class="stat-card stat-card-accent">
-                <span>Today&apos;s Sales</span>
-                <strong id="hero-sales">{{ settings["currency_symbol"] }} {{ stats["today_sales"] }}</strong>
-                <p id="stat-today-sales">{{ settings["currency_symbol"] }} {{ stats["today_sales"] }}</p>
-            </article>
-        </section>
-
-        <nav class="page-nav">
-            <button class="nav-pill active" type="button" data-section-target="new-bill">New Bill</button>
-            <button class="nav-pill" type="button" data-section-target="history">Bills</button>
-            <button class="nav-pill" type="button" data-section-target="settings">Settings</button>
-        </nav>
-
-        <section id="new-bill" class="section active">
-            <div class="workspace-grid">
-                <article class="panel">
-                    <div class="panel-head">
-                        <div>
-                            <p class="eyebrow">Invoice Entry</p>
-                            <h2>Create tax invoice</h2>
-                        </div>
-                        <p class="support-copy">Preview first, verify everything, then generate the final bill number only once.</p>
-                    </div>
-
-                    <form id="invoice-form" class="invoice-form">
-                        <section class="form-section">
-                            <div class="form-section-head">
-                                <div>
-                                    <h3>Shop &amp; invoice details</h3>
-                                    <p>These details appear on the printed bill.</p>
-                                </div>
-                            </div>
-                            <div class="form-grid form-grid-2">
-                                <label>Shop Name
-                                    <input name="store_name" required>
-                                </label>
-                                <label>Phone Number
-                                    <input name="store_phone" placeholder="+91...">
-                                </label>
-                            </div>
-                            <label>Shop Address
-                                <textarea name="store_address" required></textarea>
-                            </label>
-                            <div class="form-grid form-grid-3">
-                                <label>GSTIN
-                                    <input name="store_gstin" placeholder="GST number">
-                                </label>
-                                <label>Email
-                                    <input name="store_email" placeholder="Optional">
-                                </label>
-                                <label>Bill Number
-                                    <input name="invoice_number" placeholder="Auto if blank">
-                                </label>
-                            </div>
-                            <div class="form-grid form-grid-3">
-                                <label>Order Reference
-                                    <input name="order_reference" placeholder="Optional order reference">
-                                </label>
-                                <label>Shipment Code
-                                    <input name="shipment_code" placeholder="Optional shipment code">
-                                </label>
-                                <label>Payment Method
-                                    <select name="payment_mode">
-                                        <option value="">Select</option>
-                                        <option value="Cash">Cash</option>
-                                        <option value="UPI">UPI</option>
-                                        <option value="Card">Card</option>
-                                        <option value="Bank Transfer">Bank Transfer</option>
-                                        <option value="Mixed">Mixed</option>
-                                    </select>
-                                </label>
-                            </div>
-                            <div class="form-grid form-grid-3">
-                                <label>Bill Date
-                                    <input name="bill_date" type="date" required>
-                                </label>
-                                <label>Delivery Date
-                                    <input name="delivery_date" type="date">
-                                </label>
-                                <label>Status
-                                    <select name="status">
-                                        <option value="BOOKED">BOOKED</option>
-                                        <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                        <option value="READY">READY</option>
-                                        <option value="DELIVERED">DELIVERED</option>
-                                        <option value="CANCELLED">CANCELLED</option>
-                                    </select>
-                                </label>
-                            </div>
-                        </section>
-
-                        <section class="form-section">
-                            <div class="form-section-head">
-                                <div>
-                                    <h3>Bill to address</h3>
-                                    <p>Customer details for the invoice.</p>
-                                </div>
-                            </div>
-                            <div class="form-grid form-grid-2">
-                                <label>Customer Name
-                                    <input name="customer_name" placeholder="Customer name">
-                                </label>
-                                <label>Phone Number
-                                    <input name="customer_phone" placeholder="Customer phone">
-                                </label>
-                            </div>
-                            <label>Billing Address
-                                <textarea name="customer_address" placeholder="Billing address"></textarea>
-                            </label>
-                        </section>
-
-                        <section class="form-section">
-                            <div class="form-section-head">
-                                <div>
-                                    <h3>Address of delivery</h3>
-                                    <p>Use delivery details only if they differ from the billing address.</p>
-                                </div>
-                            </div>
-                            <div class="form-grid form-grid-2">
-                                <label>Delivery Name
-                                    <input name="delivery_name" placeholder="Optional">
-                                </label>
-                                <label>Delivery Phone
-                                    <input name="delivery_phone" placeholder="Optional">
-                                </label>
-                            </div>
-                            <label>Delivery Address
-                                <textarea name="delivery_address" placeholder="Optional delivery address"></textarea>
-                            </label>
-                            <div id="customer-match-box" class="inline-note">Recent customer shortcuts will fill the billing section. Delivery fields are optional.</div>
-                        </section>
-
-                        <section class="form-section">
-                            <div class="form-section-head">
-                                <div>
-                                    <h3>Comments &amp; extra notes</h3>
-                                    <p>Use these only when needed on the printed invoice.</p>
-                                </div>
-                            </div>
-                            <div class="form-grid form-grid-2">
-                                <label>Gift From
-                                    <input name="gift_from" placeholder="Optional">
-                                </label>
-                                <label>Gift To
-                                    <input name="gift_to" placeholder="Optional">
-                                </label>
-                            </div>
-                            <label>Customer Comments
-                                <textarea name="customer_comments" placeholder="Optional remarks or delivery notes"></textarea>
-                            </label>
-                        </section>
-
-                        <section class="form-section">
-                            <div class="form-section-head">
-                                <div>
-                                    <h3>Goods &amp; pricing</h3>
-                                    <p>Each row supports quantity, unit price, HSN code, and GST rate.</p>
-                                </div>
-                            </div>
-                            <div class="invoice-items-head">
-                                <span>Item</span>
-                                <span>Description</span>
-                                <span>HSN</span>
-                                <span>Qty</span>
-                                <span>Unit Price</span>
-                                <span>GST %</span>
-                            </div>
-                            <div class="line-items">
-                                <div class="line-item-row invoice-item-row" data-item-row>
-                                    <input name="item_name" value="Frame" aria-label="Item name">
-                                    <input name="description" placeholder="Frame model or product details">
-                                    <input name="hsn_code" placeholder="HSN">
-                                    <input name="quantity" type="number" min="1" step="1" value="1" aria-label="Quantity">
-                                    <input name="amount" type="number" min="0" step="0.01" value="0" aria-label="Unit price">
-                                    <input name="gst_rate" type="number" min="0" step="0.01" value="18" aria-label="GST rate">
-                                </div>
-                                <div class="line-item-row invoice-item-row" data-item-row>
-                                    <input name="item_name" value="Lenses" aria-label="Item name">
-                                    <input name="description" placeholder="Lens type, coating, or power">
-                                    <input name="hsn_code" placeholder="HSN">
-                                    <input name="quantity" type="number" min="1" step="1" value="1" aria-label="Quantity">
-                                    <input name="amount" type="number" min="0" step="0.01" value="0" aria-label="Unit price">
-                                    <input name="gst_rate" type="number" min="0" step="0.01" value="18" aria-label="GST rate">
-                                </div>
-                                <div class="line-item-row invoice-item-row" data-item-row>
-                                    <input name="item_name" value="Contact Lenses" aria-label="Item name">
-                                    <input name="description" placeholder="Optional">
-                                    <input name="hsn_code" placeholder="HSN">
-                                    <input name="quantity" type="number" min="1" step="1" value="1" aria-label="Quantity">
-                                    <input name="amount" type="number" min="0" step="0.01" value="0" aria-label="Unit price">
-                                    <input name="gst_rate" type="number" min="0" step="0.01" value="18" aria-label="GST rate">
-                                </div>
-                                <div class="line-item-row invoice-item-row" data-item-row>
-                                    <input name="item_name" value="Accessories" aria-label="Item name">
-                                    <input name="description" placeholder="Case, cloth, spray, or accessories">
-                                    <input name="hsn_code" placeholder="HSN">
-                                    <input name="quantity" type="number" min="1" step="1" value="1" aria-label="Quantity">
-                                    <input name="amount" type="number" min="0" step="0.01" value="0" aria-label="Unit price">
-                                    <input name="gst_rate" type="number" min="0" step="0.01" value="18" aria-label="GST rate">
-                                </div>
-                                <div class="line-item-row invoice-item-row" data-item-row>
-                                    <input name="item_name" value="Other" aria-label="Item name">
-                                    <input name="description" placeholder="Any extra product or service">
-                                    <input name="hsn_code" placeholder="HSN">
-                                    <input name="quantity" type="number" min="1" step="1" value="1" aria-label="Quantity">
-                                    <input name="amount" type="number" min="0" step="0.01" value="0" aria-label="Unit price">
-                                    <input name="gst_rate" type="number" min="0" step="0.01" value="18" aria-label="GST rate">
-                                </div>
-                            </div>
-                            <div class="form-grid form-grid-3">
-                                <label>Discount %
-                                    <input name="discount_percent" type="number" min="0" step="0.01" value="{{ settings['default_discount_percent'] }}">
-                                </label>
-                                <label>Advance Paid
-                                    <input name="advance_paid" type="number" min="0" step="0.01" value="0">
-                                </label>
-                                <label>Tax Mode
-                                    <select name="tax_mode">
-                                        <option value="INTRA_STATE">CGST + SGST</option>
-                                        <option value="INTER_STATE">IGST</option>
-                                    </select>
-                                </label>
-                            </div>
-                        </section>
-
-                        <div class="action-row">
-                            <button class="button button-primary" type="button" id="preview-draft">Preview Bill</button>
-                            <button class="button button-secondary" type="button" id="preview-last" disabled>Open Print Preview</button>
-                            <button class="button button-secondary" type="button" id="direct-print" disabled>Print Selected Bill</button>
-                            <button class="button button-ghost" type="button" id="reset-form">Reset Form</button>
-                        </div>
-                    </form>
-
-                    <div class="status-box" id="status-box" aria-live="polite"></div>
-                </article>
-
-                <aside class="panel sidebar-panel">
-                    <div class="sidebar-block">
-                        <p class="eyebrow">Live Totals</p>
-                        <h3>Invoice summary</h3>
-                        <div class="totals-card">
-                            <div class="total-line"><span>Subtotal</span><strong id="subtotal-value">0.00</strong></div>
-                            <div class="total-line"><span>Discount</span><strong id="discount-value">0.00</strong></div>
-                            <div class="total-line"><span>Taxable Value</span><strong id="taxable-value">0.00</strong></div>
-                            <div class="total-line"><span>IGST</span><strong id="igst-value">0.00</strong></div>
-                            <div class="total-line"><span>SGST</span><strong id="sgst-value">0.00</strong></div>
-                            <div class="total-line"><span>CGST</span><strong id="cgst-value">0.00</strong></div>
-                            <div class="total-line total-line-grand"><span>Grand Total</span><strong id="grand-total-value">0.00</strong></div>
-                            <div class="total-line"><span>Advance</span><strong id="advance-value">0.00</strong></div>
-                            <div class="total-line"><span>Balance Due</span><strong id="balance-value">0.00</strong></div>
-                        </div>
-                    </div>
-
-                    <div class="sidebar-block">
-                        <p class="eyebrow">Customers</p>
-                        <h3>Recent customer shortcuts</h3>
-                        <div class="customer-list" id="recent-customers"></div>
-                    </div>
-
-                    <div class="sidebar-block">
-                        <p class="eyebrow">Printing</p>
-                        <h3>Printer selection</h3>
-                        <label>Available printers
-                            <select id="printer-select">
-                                <option value="">Select printer for direct print</option>
-                                {% for printer in printer_info.printers %}
-                                    <option value="{{ printer['Name'] }}"{% if printer['Default'] %} selected{% endif %}>{{ printer['Name'] }}{% if printer['Default'] %} (Default){% endif %}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <p class="inline-note">{{ printer_info.message }}</p>
-                    </div>
-
-                    <div class="preview-panel" id="bill-preview-panel" hidden>
-                        <div class="preview-note" id="bill-preview-note">Preview ready. Confirm to generate the final bill.</div>
-                        <div class="preview-sheet" id="bill-preview-body"></div>
-                        <div class="action-row action-row-stacked">
-                            <button class="button button-primary" type="button" id="confirm-generate" disabled>Confirm &amp; Generate</button>
-                            <button class="button button-ghost" type="button" id="edit-preview">Edit Bill</button>
-                        </div>
-                    </div>
-                </aside>
-            </div>
-        </section>
-
-        <section id="history" class="section">
-            <div class="panel">
-                <div class="panel-head">
+        <main class="workspace">
+            <section id="bill-section" class="card bill-card">
+                <div class="section-head">
                     <div>
-                        <p class="eyebrow">Bill History</p>
-                        <h2>Search and review bills</h2>
+                        <p class="eyebrow">Bill</p>
+                        <h2>Create invoice</h2>
                     </div>
-                    <button class="button button-ghost" type="button" id="refresh-history">Refresh</button>
-                </div>
-                <div class="toolbar-row">
-                    <label class="search-field">Search
-                        <input id="history-search" placeholder="Bill no, customer, or phone">
-                    </label>
-                    <label>Status
-                        <select id="history-status">
-                            {% for status in statuses %}
-                                <option value="{{ status }}">{{ status }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <button class="button button-secondary" type="button" id="export-filtered-csv">Export Current Filter</button>
-                </div>
-                <div class="history-list" id="history-results"></div>
-            </div>
-        </section>
-
-        <section id="settings" class="section">
-            <div class="settings-grid settings-grid-single">
-                <article class="panel">
-                    <div class="panel-head">
-                        <div>
-                            <p class="eyebrow">Store Profile</p>
-                            <h2>Shop settings</h2>
-                        </div>
-                    </div>
-                    <form id="settings-form" class="invoice-form">
-                        <div class="form-grid form-grid-2">
-                            <label>Store Name
-                                <input name="store_name" value="{{ settings['store_name'] }}" required>
-                            </label>
-                            <label>Legal Name
-                                <input name="store_legal_name" value="{{ settings['store_legal_name'] or settings['store_name'] }}">
-                            </label>
-                        </div>
-                        <label>Address
-                            <textarea name="store_address" required>{{ settings['store_address'] }}</textarea>
+                    <div class="section-tools">
+                        <label class="printer-select">
+                            <span>Printer</span>
+                            <select id="printer-select"></select>
                         </label>
-                        <div class="form-grid form-grid-3">
-                            <label>Phone Number
-                                <input name="store_phone" value="{{ settings['store_phone'] or '' }}">
+                        <button class="button button-ghost" type="button" id="direct-print" disabled>Print</button>
+                        <button class="button button-secondary" type="button" id="preview-draft">Preview Bill</button>
+                        <button class="button button-primary" type="button" id="confirm-generate" disabled>Generate Bill</button>
+                    </div>
+                </div>
+
+                <div id="edit-mode-banner" class="edit-mode-banner" hidden>
+                    <div>
+                        <strong id="edit-mode-title">Editing bill</strong>
+                        <p id="edit-mode-copy">Changes will update the same saved bill.</p>
+                    </div>
+                    <button class="button button-ghost" type="button" id="cancel-edit">Cancel Edit</button>
+                </div>
+
+                <form id="invoice-form" class="invoice-form" novalidate>
+                    <section class="form-block">
+                        <h3>Shop &amp; bill details</h3>
+                        <div class="grid grid-3">
+                            <label>
+                                Bill No
+                                <input name="invoice_number" placeholder="Auto generated if blank">
                             </label>
-                            <label>GSTIN
-                                <input name="store_gstin" value="{{ settings['store_gstin'] or '' }}">
+                            <label>
+                                Bill Date
+                                <input name="bill_date" type="date" required>
                             </label>
-                            <label>Email
-                                <input name="store_email" value="{{ settings['store_email'] or '' }}">
+                            <label>
+                                GST %
+                                <input name="gst_percent" type="number" min="0" step="0.01" value="{{ settings['default_gst_percent'] }}">
                             </label>
                         </div>
-                        <div class="form-grid form-grid-3">
-                            <label>Website
-                                <input name="store_website" value="{{ settings['store_website'] or '' }}">
+                    </section>
+
+                    <section class="form-block">
+                        <h3>Customer details</h3>
+                        <div class="grid grid-3">
+                            <label>
+                                Customer Name
+                                <input name="customer_name" placeholder="Customer name" required>
                             </label>
-                            <label>State Code
-                                <input name="store_state_code" value="{{ settings['store_state_code'] or '' }}">
+                            <label>
+                                Customer Contact
+                                <input name="customer_phone" placeholder="Phone number" required>
                             </label>
-                            <label>Currency Symbol
+                            <label>
+                                Email
+                                <input name="customer_email" type="email" placeholder="Optional email">
+                            </label>
+                        </div>
+                        <label class="mt-12">
+                            Customer Address
+                            <textarea name="customer_address" rows="2" placeholder="Customer address"></textarea>
+                        </label>
+                        <label class="mt-12">
+                            Note / Remark
+                            <textarea name="remark" rows="2" placeholder="Only reading, special instruction, or other note"></textarea>
+                        </label>
+                        <div id="customer-shortcuts" class="shortcut-row" aria-label="Recent customers"></div>
+                    </section>
+
+                    <section class="form-block">
+                        <div class="section-head compact">
+                            <div>
+                                <h3>Description of goods</h3>
+                                <p>Select the category and the item description you want to bill.</p>
+                            </div>
+                        </div>
+
+                        <div class="items-table">
+                            <div class="items-head">
+                                <span>Description</span>
+                                <span>Unit Price</span>
+                                <span>Qty</span>
+                                <span>Total</span>
+                            </div>
+
+                            <div class="line-row" data-line-row>
+                                <label>
+                                    <span class="sr-only">Category</span>
+                                    <select name="item_category" class="item-kind" data-kind>
+                                        <option value="Frame" selected>Frame</option>
+                                        <option value="Lens">Lens</option>
+                                        <option value="Accessories">Accessories</option>
+                                        <option value="Contact Lens">Contact Lens</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span class="sr-only">Description</span>
+                                    <select name="item_description" class="item-description" data-description></select>
+                                </label>
+                                <input name="unit_price" type="number" min="0" step="0.01" placeholder="0.00" data-price>
+                                <input name="quantity" type="number" min="1" step="1" value="1" data-qty>
+                                <div class="line-total" data-line-total>0.00</div>
+                                <input type="hidden" name="hsn_code" data-hsn>
+                                <input type="hidden" name="gst_rate" data-gst-rate value="0">
+                            </div>
+
+                            <div class="line-row" data-line-row>
+                                <label>
+                                    <span class="sr-only">Category</span>
+                                    <select name="item_category" class="item-kind" data-kind>
+                                        <option value="Frame">Frame</option>
+                                        <option value="Lens" selected>Lens</option>
+                                        <option value="Accessories">Accessories</option>
+                                        <option value="Contact Lens">Contact Lens</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span class="sr-only">Description</span>
+                                    <select name="item_description" class="item-description" data-description></select>
+                                </label>
+                                <input name="unit_price" type="number" min="0" step="0.01" placeholder="0.00" data-price>
+                                <input name="quantity" type="number" min="1" step="1" value="1" data-qty>
+                                <div class="line-total" data-line-total>0.00</div>
+                                <input type="hidden" name="hsn_code" data-hsn>
+                                <input type="hidden" name="gst_rate" data-gst-rate value="0">
+                            </div>
+
+                            <div class="line-row" data-line-row>
+                                <label>
+                                    <span class="sr-only">Category</span>
+                                    <select name="item_category" class="item-kind" data-kind>
+                                        <option value="Frame">Frame</option>
+                                        <option value="Lens">Lens</option>
+                                        <option value="Accessories" selected>Accessories</option>
+                                        <option value="Contact Lens">Contact Lens</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span class="sr-only">Description</span>
+                                    <select name="item_description" class="item-description" data-description></select>
+                                </label>
+                                <input name="unit_price" type="number" min="0" step="0.01" placeholder="0.00" data-price>
+                                <input name="quantity" type="number" min="1" step="1" value="1" data-qty>
+                                <div class="line-total" data-line-total>0.00</div>
+                                <input type="hidden" name="hsn_code" data-hsn>
+                                <input type="hidden" name="gst_rate" data-gst-rate value="0">
+                            </div>
+
+                            <div class="line-row" data-line-row>
+                                <label>
+                                    <span class="sr-only">Category</span>
+                                    <select name="item_category" class="item-kind" data-kind>
+                                        <option value="Frame">Frame</option>
+                                        <option value="Lens">Lens</option>
+                                        <option value="Accessories">Accessories</option>
+                                        <option value="Contact Lens" selected>Contact Lens</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span class="sr-only">Description</span>
+                                    <select name="item_description" class="item-description" data-description></select>
+                                </label>
+                                <input name="unit_price" type="number" min="0" step="0.01" placeholder="0.00" data-price>
+                                <input name="quantity" type="number" min="1" step="1" value="1" data-qty>
+                                <div class="line-total" data-line-total>0.00</div>
+                                <input type="hidden" name="hsn_code" data-hsn>
+                                <input type="hidden" name="gst_rate" data-gst-rate value="0">
+                            </div>
+                        </div>
+
+                        <div class="table-actions">
+                            <button class="button button-ghost" type="button" id="add-line">Add line</button>
+                            <span class="table-hint">Use more lines only when the bill needs them. Blank rows are ignored.</span>
+                        </div>
+
+                        <div class="summary-grid">
+                            <label>
+                                Discount %
+                                <input name="discount_percent" type="number" min="0" step="0.01" value="{{ settings['default_discount_percent'] }}">
+                            </label>
+                            <label>
+                                Advance Paid
+                                <input name="advance_paid" type="number" min="0" step="0.01" value="0">
+                            </label>
+                            <label>
+                                Advance Cash
+                                <input name="advance_cash" type="checkbox">
+                            </label>
+                            <label>
+                                Advance GPay
+                                <input name="advance_gpay" type="checkbox">
+                            </label>
+                            <label>
+                                Insurance
+                                <input name="insurance_opt_in" type="checkbox">
+                            </label>
+                            <label>
+                                Membership
+                                <input name="membership_opt_in" type="checkbox">
+                            </label>
+                        </div>
+                    </section>
+                </form>
+            </section>
+
+            <aside class="sidebar">
+                <section class="card preview-card">
+                    <div class="section-head compact">
+                        <div>
+                            <p class="eyebrow">Preview</p>
+                            <h2>Draft bill</h2>
+                        </div>
+                    </div>
+                    <div id="preview-status" class="status-box">Fill the bill and preview it before saving.</div>
+                    <div id="draft-preview" class="draft-preview" hidden></div>
+                </section>
+
+                <section id="history-section" class="card">
+                    <div class="section-head compact">
+                        <div>
+                            <p class="eyebrow">Bills</p>
+                            <h2>Saved history</h2>
+                        </div>
+                    </div>
+                    <div class="history-controls">
+                        <input id="history-query" type="search" placeholder="Search by customer or bill number">
+                        <select id="history-status-filter" hidden></select>
+                    </div>
+                    <div id="history-results" class="history-results"></div>
+                </section>
+
+                <section id="settings-section" class="card">
+                    <div class="section-head compact">
+                        <div>
+                            <p class="eyebrow">Settings</p>
+                            <h2>Shop details</h2>
+                        </div>
+                    </div>
+                    <form id="settings-form" class="settings-form">
+                        <label>
+                            Shop Name
+                            <input name="store_name" required>
+                        </label>
+                        <label>
+                            Shop Address
+                            <textarea name="store_address" rows="3" required></textarea>
+                        </label>
+                        <div class="grid grid-2">
+                            <label>
+                                Phone
+                                <input name="store_phone" placeholder="Optional">
+                            </label>
+                            <label>
+                                Email
+                                <input name="store_email" type="email" placeholder="Optional">
+                            </label>
+                        </div>
+                        <div class="grid grid-2">
+                            <label>
+                                GSTIN
+                                <input name="store_gstin" placeholder="Optional">
+                            </label>
+                            <label>
+                                Store State Code
+                                <input name="store_state_code" placeholder="Optional">
+                            </label>
+                        </div>
+                        <div class="grid grid-2">
+                            <label>
+                                Currency Symbol
                                 <input name="currency_symbol" value="{{ settings['currency_symbol'] }}">
                             </label>
-                        </div>
-                        <div class="form-grid form-grid-3">
-                            <label>Default Discount %
-                                <input name="default_discount_percent" type="number" min="0" step="0.01" value="{{ settings['default_discount_percent'] }}">
-                            </label>
-                            <label>Authorized Signatory
-                                <input name="authorized_signatory" value="{{ settings['authorized_signatory'] or 'Authorized Signatory' }}">
-                            </label>
-                            <label>Footer Note
+                            <label>
+                                Footer Note
                                 <input name="footer_note" value="{{ settings['footer_note'] }}">
                             </label>
                         </div>
-                        <label>Terms and Conditions
-                            <textarea name="terms_and_conditions">{{ settings['terms_and_conditions'] or '' }}</textarea>
-                        </label>
-                        <div class="action-row">
-                            <button class="button button-primary" type="submit">Save Settings</button>
-                            <a class="button button-ghost" href="/api/export/database">Download Database Backup</a>
+                        <div class="grid grid-2">
+                            <label>
+                                Default Discount %
+                                <input name="default_discount_percent" type="number" min="0" step="0.01" value="{{ settings['default_discount_percent'] }}">
+                            </label>
+                            <label>
+                                Default GST %
+                                <input name="default_gst_percent" type="number" min="0" step="0.01" value="{{ settings['default_gst_percent'] }}">
+                            </label>
                         </div>
+                        <label>
+                            Authorized Signatory
+                            <input name="authorized_signatory" value="{{ settings['authorized_signatory'] }}">
+                        </label>
+                        <button class="button button-primary" type="submit">Save Settings</button>
                     </form>
-                    <div class="status-box" id="settings-status" aria-live="polite"></div>
-                </article>
-            </div>
-        </section>
+                </section>
+            </aside>
+        </main>
     </div>
 
     <script id="initial-settings" type="application/json">{{ settings|tojson }}</script>
-    <script id="initial-stats" type="application/json">{{ stats|tojson }}</script>
     <script id="initial-invoices" type="application/json">{{ invoices|tojson }}</script>
     <script id="initial-customers" type="application/json">{{ customers|tojson }}</script>
-    <script id="initial-statuses" type="application/json">{{ statuses|tojson }}</script>
-    <script src="/static/app.js"></script>
+    <script id="initial-printers" type="application/json">{{ printer_info|tojson }}</script>
+    <script src="/static/app.js" defer></script>
 </body>
 </html>

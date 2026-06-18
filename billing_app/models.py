@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 DATE_FORMAT = "%d/%m/%Y"
+DATE_INPUT_FORMAT = "%Y-%m-%d"
 ORDER_STATUSES = ["BOOKED", "IN_PROGRESS", "READY", "DELIVERED", "CANCELLED"]
 PAYMENT_MODES = ["Cash", "UPI", "Card", "Bank Transfer", "Mixed"]
 TAX_MODES = ["INTRA_STATE", "INTER_STATE"]
@@ -33,7 +34,12 @@ def normalize_date_string(value: Any) -> str | None:
     text = normalize_optional_text(value)
     if not text:
         return None
-    return datetime.strptime(text, DATE_FORMAT).strftime(DATE_FORMAT)
+    for date_format in (DATE_FORMAT, DATE_INPUT_FORMAT):
+        try:
+            return datetime.strptime(text, date_format).strftime(DATE_FORMAT)
+        except ValueError:
+            continue
+    raise ValueError("Date must be DD/MM/YYYY or YYYY-MM-DD")
 
 
 def parse_bill_date(value: str | None) -> date | None:
@@ -76,6 +82,7 @@ class StoreSettingsPayload(BaseModel):
     store_phone: str | None = Field(default=None, max_length=40)
     store_gstin: str | None = Field(default=None, max_length=40)
     store_email: str | None = Field(default=None, max_length=120)
+    default_gst_percent: Decimal = Field(default=Decimal("18"), ge=0)
     store_website: str | None = Field(default=None, max_length=120)
     store_state_code: str | None = Field(default=None, max_length=20)
     authorized_signatory: str | None = Field(default="Authorized Signatory", max_length=80)
@@ -108,13 +115,20 @@ class StoreSettingsPayload(BaseModel):
     def normalize_default_discount(cls, value: Any) -> Decimal:
         return _decimal_from_value(value)
 
+    @field_validator("default_gst_percent", mode="before")
+    @classmethod
+    def normalize_default_gst_percent(cls, value: Any) -> Decimal:
+        return _decimal_from_value(value)
+
 
 class InvoicePayload(BaseModel):
+    source_invoice_id: int | None = Field(default=None, ge=1)
     store_name: str = Field(min_length=2, max_length=120)
     store_address: str = Field(min_length=4, max_length=300)
     store_phone: str | None = Field(default=None, max_length=40)
     store_gstin: str | None = Field(default=None, max_length=40)
     store_email: str | None = Field(default=None, max_length=120)
+    customer_email: str | None = Field(default=None, max_length=120)
     invoice_number: str | None = Field(default=None, max_length=40)
     order_reference: str | None = Field(default=None, max_length=60)
     shipment_code: str | None = Field(default=None, max_length=60)
@@ -126,6 +140,11 @@ class InvoicePayload(BaseModel):
     customer_name: str | None = Field(default=None, max_length=120)
     customer_address: str | None = Field(default=None, max_length=300)
     customer_phone: str | None = Field(default=None, max_length=40)
+    insurance_opt_in: bool = False
+    membership_opt_in: bool = False
+    advance_cash: bool = False
+    advance_gpay: bool = False
+    gst_percent: Decimal = Field(default=Decimal("18"), ge=0)
     delivery_name: str | None = Field(default=None, max_length=120)
     delivery_address: str | None = Field(default=None, max_length=300)
     delivery_phone: str | None = Field(default=None, max_length=40)
@@ -148,6 +167,7 @@ class InvoicePayload(BaseModel):
         "store_phone",
         "store_gstin",
         "store_email",
+        "customer_email",
         "invoice_number",
         "order_reference",
         "shipment_code",
@@ -177,7 +197,7 @@ class InvoicePayload(BaseModel):
     def normalize_dates(cls, value: Any) -> str | None:
         return normalize_date_string(value)
 
-    @field_validator("discount_percent", "advance_paid", mode="before")
+    @field_validator("gst_percent", "discount_percent", "advance_paid", mode="before")
     @classmethod
     def normalize_money_fields(cls, value: Any) -> Decimal:
         return _decimal_from_value(value)
@@ -280,6 +300,7 @@ class InvoiceLineCalculated(BaseModel):
 
 class InvoiceCalculated(BaseModel):
     created_at: datetime
+    source_invoice_id: int | None = None
     invoice_number: str
     order_reference: str | None = None
     shipment_code: str | None = None
@@ -294,8 +315,14 @@ class InvoiceCalculated(BaseModel):
     store_gstin: str | None = None
     store_email: str | None = None
     customer_name: str | None = None
+    customer_email: str | None = None
     customer_address: str | None = None
     customer_phone: str | None = None
+    insurance_opt_in: bool = False
+    membership_opt_in: bool = False
+    advance_cash: bool = False
+    advance_gpay: bool = False
+    gst_percent: Decimal = Decimal("18")
     delivery_name: str | None = None
     delivery_address: str | None = None
     delivery_phone: str | None = None

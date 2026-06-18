@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import io
 import os
-import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -16,6 +15,7 @@ from pydantic import BaseModel
 from billing_app.database import BillingDatabase
 from billing_app.database import DraftNotFoundError
 from billing_app.database import InvoiceConflictError
+from billing_app.database import InvoiceNotFoundError
 from billing_app.models import InvoiceConfirmPayload
 from billing_app.models import ORDER_STATUSES
 from billing_app.models import InvoicePayload
@@ -26,24 +26,8 @@ from billing_app.printer import build_text_bill
 
 
 BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = Path(os.getenv("BILLING_DB_PATH", str(BASE_DIR / "data" / "billing.db")))
 STATIC_DIR = BASE_DIR / "static"
-
-
-def _default_db_path() -> Path:
-    explicit_path = os.getenv("BILLING_DB_PATH")
-    if explicit_path:
-        return Path(explicit_path)
-
-    temp_db = Path(tempfile.gettempdir()) / "billing.db"
-    local_db = BASE_DIR / "data" / "billing.db"
-
-    if os.getenv("VERCEL") or not os.access(BASE_DIR, os.W_OK):
-        return temp_db
-
-    return local_db
-
-
-DB_PATH = _default_db_path()
 
 database = BillingDatabase(DB_PATH)
 printer_service = PrinterService()
@@ -154,6 +138,8 @@ async def preview_invoice(payload: InvoicePayload):
         draft = database.create_invoice_draft(payload)
     except InvoiceConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except InvoiceNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     return {
         "message": "Preview generated successfully.",
@@ -171,9 +157,12 @@ async def confirm_invoice(payload: InvoiceConfirmPayload):
         raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(exc)) from exc
     except InvoiceConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except InvoiceNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     return {
-        "message": "Invoice created successfully.",
+        "message": "Invoice updated successfully." if saved["operation"] == "updated" else "Invoice created successfully.",
+        "operation": saved["operation"],
         "invoice": saved["invoice"],
         "print_preview_url": f"/invoices/{saved['id']}/print",
     }
@@ -185,31 +174,22 @@ async def export_invoices_csv(query: str | None = None, status: str | None = Non
     output = io.StringIO()
     fieldnames = [
         "invoice_number",
-        "order_reference",
-        "shipment_code",
         "bill_date",
-        "delivery_date",
         "status",
         "customer_name",
         "customer_phone",
-        "customer_address",
-        "delivery_name",
-        "delivery_phone",
-        "delivery_address",
-        "payment_mode",
-        "tax_mode",
-        "gift_from",
-        "gift_to",
-        "customer_comments",
+        "customer_email",
+        "remark",
+        "insurance_opt_in",
+        "membership_opt_in",
+        "advance_cash",
+        "advance_gpay",
         "item_summary",
         "total_quantity",
         "subtotal",
+        "gst_percent",
         "discount_percent",
         "discount_amount",
-        "taxable_subtotal",
-        "igst_total",
-        "sgst_total",
-        "cgst_total",
         "total_tax",
         "subtotal_including_tax",
         "grand_total",

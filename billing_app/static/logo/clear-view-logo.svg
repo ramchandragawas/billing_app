@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 240" role="img" aria-labelledby="title desc">
+  <title id="title">Clear View Logo</title>
+  <desc id="desc">Eye style logo for Clear View optical billing</desc>
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f3d42"/>
+      <stop offset="1" stop-color="#1f6c6f"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d7b46a"/>
+      <stop offset="1" stop-color="#f4dfad"/>
+    </linearGradient>
+  </defs>
+  <rect width="820" height="240" rx="28" fill="white" opacity="0"/>
+  <g transform="translate(34 34)">
+    <circle cx="86" cy="86" r="86" fill="url(#g1)"/>
+    <circle cx="86" cy="86" r="62" fill="none" stroke="url(#g2)" stroke-width="12"/>
+    <circle cx="86" cy="86" r="28" fill="#f4dfad"/>
+    <path d="M18 92c17-31 40-46 68-46s51 15 68 46" fill="none" stroke="#f8f3e7" stroke-width="10" stroke-linecap="round"/>
+    <path d="M19 82c16-22 38-35 67-35s51 13 67 35" fill="none" stroke="#0f3d42" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+    <path d="M19 90c16-22 38-35 67-35s51 13 67 35" fill="none" stroke="#0f3d42" stroke-width="3" stroke-linecap="round" opacity="0.28"/>
+    <circle cx="86" cy="86" r="14" fill="#0f3d42"/>
+  </g>
+  <g transform="translate(230 63)">
+    <text x="0" y="54" fill="#0f3d42" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="1.5">CLEAR VIEW</text>
+    <text x="2" y="104" fill="#7a6b4d" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="600" letter-spacing="5">OPTICAL LENSES</text>
+    <rect x="2" y="123" width="410" height="6" rx="3" fill="url(#g2)"/>
+  </g>
+</svg>

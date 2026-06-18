@@ -106,47 +106,48 @@ def build_text_bill(invoice: dict) -> str:
     lines.extend(
         [
             "-" * 40,
+            f"Invoice: {calculated['invoice_number']}",
             f"Date: {calculated['bill_date']}",
-            f"Order Ref: {calculated.get('order_reference') or ''}",
-            f"Shipment: {calculated.get('shipment_code') or ''}",
-            f"Delivery: {calculated.get('delivery_date') or ''}",
-            f"Serial: {calculated['invoice_number']}",
-            f"Status: {calculated.get('status') or 'BOOKED'}",
             f"Customer: {calculated.get('customer_name') or 'Walk-in'}",
         ]
     )
 
-    if calculated.get("customer_address"):
-        lines.append(f"Address: {calculated['customer_address']}")
     if calculated.get("customer_phone"):
         lines.append(f"Phone: {calculated['customer_phone']}")
-    if calculated.get("payment_mode"):
-        lines.append(f"Payment: {calculated['payment_mode']}")
-    if calculated.get("delivery_address"):
-        lines.append(f"Ship To: {calculated['delivery_address']}")
-    if calculated.get("customer_comments") or calculated.get("remark"):
+    if calculated.get("customer_email"):
+        lines.append(f"Email: {calculated['customer_email']}")
+    if calculated.get("remark") or calculated.get("customer_comments"):
         lines.append(f"Note: {calculated.get('customer_comments') or calculated.get('remark')}")
+    flags = ", ".join(
+        flag
+        for flag, enabled in [
+            ("Insurance", calculated.get("insurance_opt_in")),
+            ("Membership", calculated.get("membership_opt_in")),
+            ("Advance Cash", calculated.get("advance_cash")),
+            ("Advance GPay", calculated.get("advance_gpay")),
+        ]
+        if enabled
+    )
+    lines.append(f"Flags: {flags or 'None'}")
 
-    lines.extend(["-" * 40, f"{'Item':12}{'Qty':>4}{'Rate':>8}{'Total':>16}", "-" * 40])
+    lines.extend(["-" * 40, f"{'Item':14}{'Qty':>4}{'Rate':>10}{'Total':>12}", "-" * 40])
 
     for item in calculated["lines"]:
-        name = item["name"][:12]
+        name = item["name"][:14]
         quantity = str(item.get("quantity") or "0")
         rate = str(item.get("unit_price") or "0.00")
         total = str(item.get("line_total") or "0.00")
-        lines.append(f"{name:12}{quantity:>4}{rate:>8}{total:>16}")
+        lines.append(f"{name:14}{quantity:>4}{rate:>10}{total:>12}")
         if item.get("description"):
-            lines.append(f"  {item['description'][:34]}")
+            lines.append(f"  {item['description'][:38]}")
 
     lines.extend(
         [
             "-" * 40,
-            f"{'Total Qty':>24}{totals.get('total_quantity', '0.00'):>16}",
             f"{'Subtotal':>24}{totals['subtotal']:>16}",
-            f"{'Discount':>24}{totals.get('discount_amount', '0.00'):>16}",
-            f"{'IGST':>24}{totals.get('igst_total', '0.00'):>16}",
-            f"{'SGST':>24}{totals.get('sgst_total', '0.00'):>16}",
-            f"{'CGST':>24}{totals.get('cgst_total', '0.00'):>16}",
+            f"{'GST':>24}{totals['total_tax']:>16}",
+            f"{'Subtotal Inc GST':>24}{totals['subtotal_including_tax']:>16}",
+            f"{'Discount':>24}{totals['discount_amount']:>16}",
             f"{'Grand Total':>24}{totals['grand_total']:>16}",
             f"{'Advance':>24}{totals['advance_paid']:>16}",
             f"{'Balance':>24}{totals['balance_due']:>16}",

@@ -6,11 +6,11 @@
     <title>{{ invoice['invoice_number'] }}</title>
     <style>
         :root {
-            --ink: #111;
-            --muted: #444;
-            --line: #222;
-            --soft: #666;
-            font-family: "Segoe UI", Arial, sans-serif;
+            --ink: #1c1c1c;
+            --muted: #555;
+            --line: #6d6d6d;
+            --paper: #fff;
+            font-family: "Segoe UI", "Aptos", Arial, sans-serif;
         }
 
         * {
@@ -21,270 +21,314 @@
             margin: 0;
             background: #ececec;
             color: var(--ink);
+            font-size: 11px;
         }
 
         .toolbar {
             display: flex;
             justify-content: center;
-            padding: 16px;
+            gap: 10px;
+            padding: 10px;
             background: #fff;
             border-bottom: 1px solid #ddd;
         }
 
+        .toolbar a,
         .toolbar button {
             border: 0;
-            border-radius: 999px;
-            padding: 12px 20px;
-            background: #16313c;
+            border-radius: 6px;
+            padding: 9px 14px;
+            background: #0f3d42;
             color: #fff;
             font: inherit;
             cursor: pointer;
+            text-decoration: none;
         }
 
         .sheet {
             width: 210mm;
             min-height: 297mm;
-            margin: 12px auto;
-            background: #fff;
-            padding: 12mm;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            margin: 10px auto 16px;
+            background: var(--paper);
+            padding: 9mm 8mm 7mm;
+            box-shadow: 0 18px 38px rgba(0, 0, 0, 0.12);
         }
 
-        .title {
-            margin: 0 0 8px;
-            text-align: center;
-            font-size: 1.6rem;
-            letter-spacing: 0.02em;
-        }
-
-        .header-grid {
-            display: grid;
-            grid-template-columns: 1fr 2.2fr 1fr;
+        .bill {
+            min-height: 277mm;
             border: 1px solid var(--line);
-        }
-
-        .header-cell {
-            min-height: 150px;
-            padding: 12px;
-            border-right: 1px solid var(--line);
-        }
-
-        .header-cell:last-child {
-            border-right: 0;
-        }
-
-        .meta-list {
             display: grid;
-            gap: 8px;
-            font-size: 0.92rem;
+            grid-template-rows: auto auto auto 1fr auto auto auto;
         }
 
-        .brand-box {
+        .top-section,
+        .customer-section,
+        .items-section,
+        .summary-section,
+        .checks-section,
+        .note-section {
+            border-bottom: 1px solid var(--line);
+        }
+
+        .top-section {
+            display: grid;
+            grid-template-columns: 1.45fr 0.8fr;
+            min-height: 35mm;
+        }
+
+        .brand-area {
+            padding: 7px 10px 5px;
             display: grid;
             gap: 6px;
             align-content: start;
         }
 
-        .brand-box h1 {
+        .brand-line {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+
+        .brand-line img {
+            width: 86px;
+            max-height: 32px;
+            object-fit: contain;
+        }
+
+        .brand-name {
             margin: 0;
-            font-size: 1.55rem;
-            text-transform: uppercase;
-        }
-
-        .brand-box .legal {
-            font-size: 1.04rem;
-            font-weight: 700;
-        }
-
-        .brand-box p {
-            margin: 0;
-            line-height: 1.45;
-            color: var(--muted);
-        }
-
-        .invoice-badge {
-            display: grid;
-            place-items: center;
-            height: 100%;
-            text-align: center;
-        }
-
-        .invoice-badge strong {
-            display: block;
-            font-size: 2.25rem;
+            font-size: 1.12rem;
             line-height: 1;
-            margin-bottom: 10px;
+            text-transform: capitalize;
         }
 
-        .invoice-badge span {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 0.95rem;
+        .brand-subtitle {
+            margin: 2px 0 0;
+            color: var(--muted);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-size: 0.72rem;
         }
 
-        .barcode-placeholder {
-            width: 100%;
-            height: 58px;
-            border: 1px solid var(--line);
-            background:
-                repeating-linear-gradient(
-                    90deg,
-                    #111 0 2px,
-                    #fff 2px 5px,
-                    #111 5px 7px,
-                    #fff 7px 11px
-                );
-        }
-
-        .address-grid {
+        .store-lines {
             display: grid;
-            grid-template-columns: 1.2fr 1.2fr 1fr;
-            border: 1px solid var(--line);
-            border-top: 0;
+            gap: 3px;
+            line-height: 1.3;
         }
 
-        .address-cell {
-            min-height: 185px;
-            padding: 12px;
-            border-right: 1px solid var(--line);
+        .store-lines p,
+        .customer-left p,
+        .customer-right p,
+        .note-section p {
+            margin: 0;
         }
 
-        .address-cell:last-child {
-            border-right: 0;
+        .meta-area {
+            border-left: 1px solid var(--line);
+            padding: 7px 10px;
+            display: grid;
+            align-content: start;
+            gap: 5px;
         }
 
-        .section-label {
-            margin: 0 0 10px;
-            font-size: 1rem;
+        .meta-row {
+            min-height: 9mm;
+            border-bottom: 1px solid rgba(109, 109, 109, 0.55);
+            padding-bottom: 4px;
+        }
+
+        .label {
+            color: var(--muted);
             font-weight: 700;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--line);
         }
 
-        .address-cell p,
-        .address-cell div,
-        .gift-note div {
-            margin: 0 0 6px;
-            line-height: 1.45;
+        .arrow-label {
+            display: inline-block;
+            min-width: 78px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .customer-section {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            min-height: 31mm;
+        }
+
+        .customer-left,
+        .customer-right {
+            padding: 7px 10px;
+            display: grid;
+            gap: 6px;
+            align-content: start;
+        }
+
+        .customer-right {
+            border-left: 1px solid var(--line);
+        }
+
+        .section-title {
+            margin: 0 0 2px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .items-section {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            min-height: 72mm;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        .items {
-            margin-top: 16px;
-            border: 1px solid var(--line);
+            table-layout: fixed;
         }
 
         .items th,
         .items td {
-            border-bottom: 1px solid var(--line);
-            padding: 10px 8px;
+            padding: 6px 8px;
             vertical-align: top;
-            font-size: 0.88rem;
+            border-bottom: 1px solid rgba(109, 109, 109, 0.35);
+            font-size: 0.79rem;
         }
 
         .items th {
             text-align: left;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
+            font-weight: 700;
         }
 
-        .items td.num,
-        .items th.num {
+        .items th:nth-child(1),
+        .items td:nth-child(1) {
+            width: 58%;
+        }
+
+        .items th:nth-child(2),
+        .items td:nth-child(2) {
+            width: 15%;
+        }
+
+        .items th:nth-child(3),
+        .items td:nth-child(3) {
+            width: 10%;
+        }
+
+        .items th:nth-child(4),
+        .items td:nth-child(4) {
+            width: 17%;
+        }
+
+        .num {
             text-align: right;
             white-space: nowrap;
         }
 
-        .items tr:last-child td {
-            border-bottom: 0;
-        }
-
-        .desc-title {
+        .item-name {
             font-weight: 700;
-            margin-bottom: 4px;
         }
 
-        .desc-sub {
-            color: var(--soft);
-            line-height: 1.35;
+        .item-desc {
+            margin-top: 2px;
+            color: var(--muted);
         }
 
-        .summary-wrap {
+        .blank-row td {
+            height: 9.4mm;
+        }
+
+        .summary-section {
             display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 0;
-            border: 1px solid var(--line);
-            border-top: 0;
-        }
-
-        .summary-left,
-        .summary-right {
-            padding: 12px;
-            min-height: 172px;
+            grid-template-columns: 1fr 82mm;
+            min-height: 42mm;
         }
 
         .summary-left {
             border-right: 1px solid var(--line);
+            padding: 7px 10px;
+            display: grid;
+            align-content: start;
+            gap: 5px;
         }
 
-        .summary-table td {
-            padding: 7px 0;
-            font-size: 0.95rem;
+        .summary-right {
+            padding: 7px 10px;
+            display: grid;
+            align-content: start;
+            gap: 5px;
         }
 
-        .summary-table td:last-child {
+        .totals {
+            display: grid;
+            gap: 3px;
+        }
+
+        .total-row {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            gap: 12px;
+            line-height: 1.35;
+        }
+
+        .total-row strong {
+            white-space: nowrap;
             text-align: right;
+        }
+
+        .grand {
+            margin-top: 2px;
+            padding-top: 6px;
+            border-top: 1px solid var(--line);
+            font-size: 0.92rem;
             font-weight: 700;
         }
 
-        .footer-box {
-            display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            border: 1px solid var(--line);
-            border-top: 0;
-        }
-
-        .footer-left,
-        .footer-right {
-            padding: 12px;
-            min-height: 130px;
-        }
-
-        .footer-left {
-            border-right: 1px solid var(--line);
-        }
-
-        .footer-left p {
-            margin: 0 0 8px;
-            line-height: 1.45;
-        }
-
-        .signature-box {
-            display: grid;
-            height: 100%;
-            align-content: end;
-            justify-items: center;
-            text-align: center;
-        }
-
-        .signature-mark {
-            width: 120px;
-            height: 52px;
-            border: 1px solid var(--line);
-            margin-bottom: 10px;
-            display: grid;
-            place-items: center;
+        .payment-mode {
             color: var(--muted);
-            font-style: italic;
+            font-size: 0.74rem;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .checks-section {
+            padding: 6px 10px 5px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .check-box {
+            width: 22px;
+            height: 16px;
+            border: 1px solid var(--line);
+            display: inline-grid;
+            place-items: center;
+            line-height: 1;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .note-section {
+            padding: 7px 10px 9px;
+            display: grid;
+            gap: 5px;
+        }
+
+        .footer-note {
+            color: var(--muted);
+            line-height: 1.35;
         }
 
         @page {
-            size: A4;
-            margin: 8mm;
+            size: A4 portrait;
+            margin: 6mm;
         }
 
         @media print {
@@ -297,239 +341,151 @@
             }
 
             .sheet {
+                width: auto;
+                min-height: auto;
                 margin: 0;
-                width: 100%;
-                min-height: auto;
-                box-shadow: none;
                 padding: 0;
-            }
-        }
-
-        @media (max-width: 900px) {
-            .sheet {
-                width: min(100%, calc(100% - 12px));
-                min-height: auto;
-                padding: 14px;
+                box-shadow: none;
             }
 
-            .header-grid,
-            .address-grid,
-            .summary-wrap,
-            .footer-box {
-                grid-template-columns: 1fr;
-            }
-
-            .header-cell,
-            .address-cell,
-            .summary-left,
-            .footer-left {
-                border-right: 0;
-                border-bottom: 1px solid var(--line);
+            .bill {
+                min-height: calc(297mm - 12mm);
             }
         }
     </style>
 </head>
 <body>
     <div class="toolbar">
-        <button onclick="window.print()">Print This Bill</button>
+        <button type="button" onclick="window.print()">Print</button>
+        <a href="/" rel="noreferrer">Back to app</a>
     </div>
 
     {% set calculated = invoice['calculated'] %}
     {% set totals = calculated['totals'] %}
-    {% set bill_name = calculated.get('customer_name') or 'Walk-in Customer' %}
-    {% set delivery_name = calculated.get('delivery_name') or calculated.get('customer_name') or 'Same as billing' %}
-    {% set comments = calculated.get('customer_comments') or calculated.get('remark') or 'No customer comments.' %}
-    {% set legal_name = settings.get('store_legal_name') or calculated.get('store_name') %}
-    {% set signatory = settings.get('authorized_signatory') or 'Authorized Signatory' %}
+    {% set lines = calculated.get('lines', []) %}
 
     <main class="sheet">
-        <h1 class="title">Tax Invoice</h1>
-
-        <section class="header-grid">
-            <div class="header-cell">
-                <div class="meta-list">
-                    <div><strong>Shipment Code:</strong> {{ calculated.get('shipment_code') or '-' }}</div>
-                    <div><strong>Order Ref:</strong> {{ calculated.get('order_reference') or '-' }}</div>
-                    <div><strong>Order Date:</strong> {{ calculated.get('bill_date') }}</div>
-                    <div><strong>Total Quantity:</strong> {{ totals.get('total_quantity') or '0.00' }}</div>
-                </div>
-                <div style="margin-top: 14px;">
-                    <div class="barcode-placeholder"></div>
-                </div>
-            </div>
-
-            <div class="header-cell">
-                <div class="brand-box">
-                    <div class="legal">{{ legal_name }}</div>
-                    <h1>{{ calculated.get('store_name') }}</h1>
-                    <p>{{ calculated.get('store_address') }}</p>
-                    {% if calculated.get('store_phone') %}
-                        <p><strong>Phone:</strong> {{ calculated.get('store_phone') }}</p>
-                    {% endif %}
-                    {% if calculated.get('store_email') %}
-                        <p><strong>Contact Email:</strong> {{ calculated.get('store_email') }}</p>
-                    {% endif %}
-                    {% if calculated.get('store_gstin') %}
-                        <p><strong>GSTIN No:</strong> {{ calculated.get('store_gstin') }}</p>
-                    {% endif %}
-                    {% if settings.get('store_state_code') %}
-                        <p><strong>State Code:</strong> {{ settings.get('store_state_code') }}</p>
-                    {% endif %}
-                    {% if settings.get('store_website') %}
-                        <p><strong>Website:</strong> {{ settings.get('store_website') }}</p>
-                    {% endif %}
-                    <p><strong>Invoice:</strong> {{ calculated.get('invoice_number') }}</p>
-                    <p><strong>Invoice Date:</strong> {{ calculated.get('bill_date') }}</p>
-                    <p><strong>Payment Method:</strong> {{ calculated.get('payment_mode') or 'Not selected' }}</p>
-                </div>
-            </div>
-
-            <div class="header-cell">
-                <div class="invoice-badge">
+        <section class="bill">
+            <header class="top-section">
+                <div class="brand-area">
+                    <div class="brand-line">
+                        <img src="/static/logo/clear-view-logo.svg" alt="Clear View logo">
                     <div>
-                        <strong>{{ calculated.get('invoice_number', '').split('-')[-1] if calculated.get('invoice_number') else '-' }}</strong>
-                        <span>Invoice Number</span>
-                        <div class="barcode-placeholder"></div>
-                        <div style="margin-top: 8px; font-size: 0.85rem;">{{ calculated.get('invoice_number') }}</div>
+                        <h1 class="brand-name">{{ settings.get('store_name') or calculated.get('store_name') or 'Clear View' }}</h1>
+                        <p class="brand-subtitle">Optical Lenses</p>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <section class="address-grid">
-            <div class="address-cell">
-                <p class="section-label">Bill To Address</p>
-                <p><strong>{{ bill_name }}</strong></p>
-                <p>{{ calculated.get('customer_address') or 'Address not provided' }}</p>
-                <p>Phone: {{ calculated.get('customer_phone') or 'Not provided' }}</p>
-            </div>
-
-            <div class="address-cell">
-                <p class="section-label">Address Of Delivery</p>
-                <p><strong>{{ delivery_name }}</strong></p>
-                <p>{{ calculated.get('delivery_address') or calculated.get('customer_address') or 'Same as billing address' }}</p>
-                <p>Phone: {{ calculated.get('delivery_phone') or calculated.get('customer_phone') or 'Not provided' }}</p>
-            </div>
-
-            <div class="address-cell gift-note">
-                <p class="section-label">Notes</p>
-                <div><strong>Gift From:</strong> {{ calculated.get('gift_from') or '-' }}</div>
-                <div><strong>Gift To:</strong> {{ calculated.get('gift_to') or '-' }}</div>
-                <div><strong>Customer Comments:</strong> {{ comments }}</div>
-                <div><strong>Status:</strong> {{ calculated.get('status') or 'BOOKED' }}</div>
-                <div><strong>Tax Mode:</strong> {{ calculated.get('tax_mode') or 'INTRA_STATE' }}</div>
-            </div>
-        </section>
-
-        <table class="items">
-            <thead>
-                <tr>
-                    <th>Description Of Goods</th>
-                    <th>HSN</th>
-                    <th class="num">Unit Price</th>
-                    <th class="num">Discount</th>
-                    <th class="num">Taxable</th>
-                    <th class="num">IGST</th>
-                    <th class="num">SGST</th>
-                    <th class="num">CGST</th>
-                    <th class="num">Qty</th>
-                    <th class="num">Unit Price (Inc. GST)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for line in calculated.get('lines', []) %}
-                    <tr>
-                        <td>
-                            <div class="desc-title">{{ line.get('name') or '-' }}</div>
-                            <div class="desc-sub">{{ line.get('description') or 'No item description' }}</div>
-                        </td>
-                        <td>{{ line.get('hsn_code') or '-' }}</td>
-                        <td class="num">{{ line.get('unit_price') or '0.00' }}</td>
-                        <td class="num">{{ line.get('discount_amount') or '0.00' }}</td>
-                        <td class="num">{{ line.get('taxable_amount') or line.get('line_total') or '0.00' }}</td>
-                        <td class="num">{{ line.get('igst_amount') or '0.00' }}</td>
-                        <td class="num">{{ line.get('sgst_amount') or '0.00' }}</td>
-                        <td class="num">{{ line.get('cgst_amount') or '0.00' }}</td>
-                        <td class="num">{{ line.get('quantity') or '0.00' }}</td>
-                        <td class="num">{{ line.get('line_total') or '0.00' }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <section class="summary-wrap">
-            <div class="summary-left">
-                <p class="section-label">Summary</p>
-                <table class="summary-table">
-                    <tr>
-                        <td>Subtotal</td>
-                        <td>{{ totals.get('subtotal') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Discount</td>
-                        <td>{{ totals.get('discount_amount') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Taxable Value</td>
-                        <td>{{ totals.get('taxable_subtotal') or totals.get('subtotal') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Total Tax</td>
-                        <td>{{ totals.get('total_tax') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Subtotal (Inc. GST)</td>
-                        <td>{{ totals.get('subtotal_including_tax') or totals.get('grand_total') or '0.00' }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="summary-right">
-                <p class="section-label">Final Amount</p>
-                <table class="summary-table">
-                    <tr>
-                        <td>IGST</td>
-                        <td>{{ totals.get('igst_total') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>CGST</td>
-                        <td>{{ totals.get('cgst_total') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>SGST</td>
-                        <td>{{ totals.get('sgst_total') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Grand Total</td>
-                        <td>{{ totals.get('grand_total') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Advance</td>
-                        <td>{{ totals.get('advance_paid') or '0.00' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Balance Due</td>
-                        <td>{{ totals.get('balance_due') or '0.00' }}</td>
-                    </tr>
-                </table>
-            </div>
-        </section>
-
-        <section class="footer-box">
-            <div class="footer-left">
-                <p class="section-label">Disclaimer</p>
-                <p>1. {{ settings.get('footer_note') or 'This is a computer generated invoice and does not require signature.' }}</p>
-                {% if settings.get('terms_and_conditions') %}
-                    <p>2. {{ settings.get('terms_and_conditions') }}</p>
-                {% endif %}
-                <p>3. Generated for {{ legal_name }}.</p>
-            </div>
-            <div class="footer-right">
-                <div class="signature-box">
-                    <div style="font-weight: 700; margin-bottom: 10px;">{{ legal_name }}</div>
-                    <div class="signature-mark">Signature</div>
-                    <div>{{ signatory }}</div>
+                    <div class="store-lines">
+                        <p><span class="arrow-label">Address</span> {{ settings.get('store_address') or calculated.get('store_address') or '-' }}</p>
+                        <p><span class="arrow-label">Mob</span> {{ settings.get('store_phone') or calculated.get('store_phone') or '-' }}</p>
+                        <p><span class="arrow-label">Email</span> {{ settings.get('store_email') or calculated.get('store_email') or '-' }}</p>
+                    </div>
                 </div>
-            </div>
+
+                <div class="meta-area">
+                    <div class="meta-row"><span class="label">Invoice No</span><br>{{ calculated.get('invoice_number') }}</div>
+                    <div class="meta-row"><span class="label">Date</span><br>{{ calculated.get('bill_date') }}</div>
+                </div>
+            </header>
+
+            <section class="customer-section">
+                <div class="customer-left">
+                    <p class="section-title">Customer Details</p>
+                    <p><span class="arrow-label">Customer Name</span> {{ calculated.get('customer_name') or '-' }}</p>
+                    <p><span class="arrow-label">Customer Contact</span> {{ calculated.get('customer_phone') or '-' }}</p>
+                    <p><span class="arrow-label">Email</span> {{ calculated.get('customer_email') or '-' }}</p>
+                </div>
+                <div class="customer-right">
+                    <p class="section-title">Address</p>
+                    <p>{{ calculated.get('customer_address') or '-' }}</p>
+                </div>
+            </section>
+
+            <section class="items-section">
+                <table class="items">
+                    <thead>
+                        <tr>
+                            <th>Description of Goods</th>
+                            <th class="num">Unit Price</th>
+                            <th class="num">Qty</th>
+                            <th class="num">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in lines %}
+                        <tr>
+                            <td>
+                                <div class="item-name">{{ item.get('name') }}</div>
+                                {% if item.get('description') %}
+                                <div class="item-desc">{{ item.get('description') }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="num">{{ item.get('unit_price') }}</td>
+                            <td class="num">{{ item.get('quantity') }}</td>
+                            <td class="num">{{ item.get('line_total') }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% set empty_rows = 5 - (lines|length) %}
+                        {% for _ in range(empty_rows if empty_rows > 0 else 0) %}
+                        <tr class="blank-row">
+                            <td>&nbsp;</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="summary-section">
+                <div class="summary-left">
+                    <div class="section-title">Remark</div>
+                    <p>{{ calculated.get('remark') or calculated.get('customer_comments') or 'No additional remark' }}</p>
+                </div>
+
+                <div class="summary-right">
+                    <div class="totals">
+                        <div class="total-row"><span>Subtotal</span><strong>{{ totals.get('subtotal') }}</strong></div>
+                        <div class="total-row"><span>GST</span><strong>{{ totals.get('total_tax') }}</strong></div>
+                        <div class="total-row"><span>Subtotal (Include GST)</span><strong>{{ totals.get('subtotal_including_tax') }}</strong></div>
+                        <div class="total-row"><span>Discount</span><strong>{{ totals.get('discount_amount') }}</strong></div>
+                        <div class="total-row grand"><span>Grand Total</span><strong>{{ totals.get('grand_total') }}</strong></div>
+                        <div class="total-row">
+                            <span>
+                                Advance (Cash / GPay)
+                                <span class="payment-mode">
+                                    Cash {{ '✓' if calculated.get('advance_cash') else ' ' }} / GPay {{ '✓' if calculated.get('advance_gpay') else ' ' }}
+                                </span>
+                            </span>
+                            <strong>{{ totals.get('advance_paid') }}</strong>
+                        </div>
+                        <div class="total-row"><span>Due Balance</span><strong>{{ totals.get('balance_due') }}</strong></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="checks-section">
+                <div class="check-row">
+                    <span>Clear View Insurance</span>
+                    <span class="check-box">{{ '✓' if calculated.get('insurance_opt_in') else '' }}</span>
+                </div>
+                <div class="check-row">
+                    <span>Clear View Membership</span>
+                    <span class="check-box">{{ '✓' if calculated.get('membership_opt_in') else '' }}</span>
+                </div>
+            </section>
+
+            <footer class="note-section">
+                <p class="footer-note">
+                    <strong>Note:</strong>
+                    {{ settings.get('footer_note') or 'We are not responsible for damage of customer old frame or glass during fitting. No replacement will be given in such case.' }}
+                </p>
+                {% if settings.get('terms_and_conditions') %}
+                <p class="footer-note">{{ settings.get('terms_and_conditions') }}</p>
+                {% endif %}
+            </footer>
         </section>
     </main>
 </body>
